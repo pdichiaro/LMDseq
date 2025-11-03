@@ -152,8 +152,7 @@ if (has_annotations) {
   all.reads <- cbind(all_name, count_data)
 }
 
-# Save integer counts
-write.table(all.reads, file=file.path(Counts_folder, "EX_reads_RAW_integer.txt"), sep="\t", col.names=NA)
+
 
 # Filter by gene type
 cat("Filtering genes by type...\n")
