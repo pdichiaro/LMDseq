@@ -214,13 +214,7 @@ RAED_MAT <- all.reads_c
 colData_test <- colData[samples,, drop=FALSE]
 matrix_test <- as.matrix(RAED_MAT[,rownames(colData_test)])
 
-# Convert to integer counts (DESeq2 requirement)
-cat("Converting estimated counts to integers for DESeq2...\n")
-matrix_test <- round(matrix_test)
-
-# Verify integer conversion
-cat("Matrix data type after rounding:", typeof(matrix_test[1,1]), "\n")
-cat("Sample values:", paste(matrix_test[1:3,1], collapse=", "), "\n")
+# Note: Integer conversion already handled upstream in create_reference_db.R
 
 # Create DESeq2 dataset
 dds_ex_test <- DESeqDataSetFromMatrix(countData = matrix_test, colData = colData_test, design = ~Bio_replicates)
