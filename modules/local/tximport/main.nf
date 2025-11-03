@@ -19,6 +19,7 @@ process TXIMPORT {
 
     script:
     def reference_arg = (reference.toString() != "[]" && reference.toString() != "") ? "-r ${reference}" : ""
+    def folders_list = all_folders.join(' ')
     """
     set -e  # Exit on any error
     
@@ -26,13 +27,16 @@ process TXIMPORT {
     echo "GTF file: ${gtf}"
     echo "Reference: ${reference}"
     echo "Number of kallisto folders: ${all_folders.size()}"
-    echo "Kallisto directories: ${all_folders.join(' ')}"
+    echo "Kallisto directories: ${folders_list}"
     
     # Validate inputs exist
     [ -f "${gtf}" ] || { echo "ERROR: GTF file not found: ${gtf}"; exit 1; }
     
+    # Create array of directories for validation
+    IFS=' ' read -ra DIRS <<< "${folders_list}"
+    
     # Check kallisto outputs
-    for dir in ${all_folders.join(' ')}; do
+    for dir in "\${DIRS[@]}"; do
         [ -d "\$dir" ] || { echo "ERROR: Directory not found: \$dir"; exit 1; }
         [ -f "\$dir/abundance.h5" ] || { echo "ERROR: abundance.h5 not found in \$dir"; exit 1; }
         echo "✓ Valid: \$dir"
@@ -43,7 +47,7 @@ process TXIMPORT {
     Rscript ${projectDir}/bin/create_reference_db.R \\
         -g ${gtf} \\
         ${reference_arg} \\
-        -i "${all_folders.join(' ')}" \\
+        -i "${folders_list}" \\
         -o EX_reads_RAW.txt || { echo "ERROR: R script failed"; exit 1; }
 
     # Validate output

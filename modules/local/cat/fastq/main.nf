@@ -22,8 +22,9 @@ process CAT_FASTQ {
     def readList = reads instanceof List ? reads.collect { it.toString() } : [reads.toString()]
     if (meta.single_end) {
         if (readList.size >= 1) {
+            def files_to_cat = readList.join(' ')
             """
-            cat ${readList.join(' ')} > ${prefix}.merged.fastq.gz
+            cat ${files_to_cat} > ${prefix}.merged.fastq.gz
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -39,9 +40,11 @@ process CAT_FASTQ {
             def read1 = []
             def read2 = []
             readList.eachWithIndex { v, ix -> (ix & 1 ? read2 : read1) << v }
+            def read1_files = read1.join(' ')
+            def read2_files = read2.join(' ')
             """
-            cat ${read1.join(' ')} > ${prefix}_1.merged.fastq.gz
-            cat ${read2.join(' ')} > ${prefix}_2.merged.fastq.gz
+            cat ${read1_files} > ${prefix}_1.merged.fastq.gz
+            cat ${read2_files} > ${prefix}_2.merged.fastq.gz
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
