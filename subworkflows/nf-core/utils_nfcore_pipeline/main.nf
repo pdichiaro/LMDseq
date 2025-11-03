@@ -33,7 +33,7 @@ def checkConfigProvided() {
     def valid_config = true as Boolean
     if (workflow.profile == 'standard' && workflow.configFiles.size() <= 1) {
         log.warn(
-            "[${workflow.manifest.name}] You are attempting to run the pipeline without any custom configuration!\n\n" + "This will be dependent on your local compute environment but can be achieved via one or more of the following:\n" + "   (1) Using an existing pipeline profile e.g. `-profile docker` or `-profile singularity`\n" + "   (2) Using an existing nf-core/configs for your Institution e.g. `-profile crick` or `-profile uppmax`\n" + "   (3) Using your own local custom config e.g. `-c /path/to/your/custom.config`\n\n" + "Please refer to the quick start section and usage docs for the pipeline.\n "
+            "You are attempting to run the pipeline without any custom configuration!\n\n" + "This will be dependent on your local compute environment but can be achieved via one or more of the following:\n" + "   (1) Using an existing pipeline profile e.g. `-profile docker` or `-profile singularity`\n" + "   (2) Using an existing nf-core/configs for your Institution e.g. `-profile crick` or `-profile uppmax`\n" + "   (3) Using your own local custom config e.g. `-c /path/to/your/custom.config`\n\n" + "Please refer to the quick start section and usage docs for the pipeline.\n "
         )
         valid_config = false
     }
@@ -210,12 +210,12 @@ def getSingleReport(multiqc_reports) {
         return multiqc_reports
     } else if (multiqc_reports instanceof List) {
         if (multiqc_reports.size() == 0) {
-            log.warn("[${workflow.manifest.name}] No reports found from process 'MULTIQC'")
+            log.warn("No reports found from process 'MULTIQC'")
             return null
         } else if (multiqc_reports.size() == 1) {
             return multiqc_reports.first()
         } else {
-            log.warn("[${workflow.manifest.name}] Found multiple reports from process 'MULTIQC', will use only one")
+            log.warn("Found multiple reports from process 'MULTIQC', will use only one")
             return multiqc_reports.first()
         }
     } else {
@@ -311,7 +311,7 @@ def completionEmail(summary_params, email, email_on_fail, plaintext_email, outdi
             def sendmail_tf = new File(workflow.launchDir.toString(), ".sendmail_tmp.html")
             sendmail_tf.withWriter { w -> w << sendmail_html }
             ['sendmail', '-t'].execute() << sendmail_html
-            log.info("-${colors.purple}[${workflow.manifest.name}]${colors.green} Sent summary e-mail to ${email_address} (sendmail)-")
+            log.info("-${colors.green} Sent summary e-mail to ${email_address} (sendmail)-")
         }
         catch (Exception msg) {
             log.debug(msg.toString())
@@ -319,7 +319,7 @@ def completionEmail(summary_params, email, email_on_fail, plaintext_email, outdi
             // Catch failures and try with plaintext
             def mail_cmd = ['mail', '-s', subject, '--content-type=text/html', email_address]
             mail_cmd.execute() << email_html
-            log.info("-${colors.purple}[${workflow.manifest.name}]${colors.green} Sent summary e-mail to ${email_address} (mail)-")
+            log.info("-${colors.green} Sent summary e-mail to ${email_address} (mail)-")
         }
     }
 
@@ -343,14 +343,14 @@ def completionSummary(monochrome_logs=true) {
     def colors = logColours(monochrome_logs) as Map
     if (workflow.success) {
         if (workflow.stats.ignoredCount == 0) {
-            log.info("-${colors.purple}[${workflow.manifest.name}]${colors.green} Pipeline completed successfully${colors.reset}-")
+            log.info("-${colors.green} Pipeline completed successfully${colors.reset}-")
         }
         else {
-            log.info("-${colors.purple}[${workflow.manifest.name}]${colors.yellow} Pipeline completed successfully, but with errored process(es) ${colors.reset}-")
+            log.info("-${colors.yellow} Pipeline completed successfully, but with errored process(es) ${colors.reset}-")
         }
     }
     else {
-        log.info("-${colors.purple}[${workflow.manifest.name}]${colors.red} Pipeline completed with errors${colors.reset}-")
+        log.info("-${colors.red} Pipeline completed with errors${colors.reset}-")
     }
 }
 
