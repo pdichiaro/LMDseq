@@ -308,13 +308,12 @@ for(ii in dup){
 ## ---- Filter and clean the data ---------
 cat("Filtering and cleaning data...\n")
 
-# Remove genes with no Symbol annotation (relaxed for testing)
+# Remove genes with no Symbol annotation
 initial_count <- nrow(GENES)
 set <- which(is.na(GENES$Symbol))
 if(length(set)!=0){
-    cat("Warning:", length(set), "genes have no Symbol annotation but keeping for testing\n")
-    # For testing purposes, don't remove genes - just warn
-    # GENES <- GENES[-set,]
+    cat("Removing", length(set), "genes with no Symbol annotation\n")
+    GENES <- GENES[-set,]
 }
 
 # Filter out genes on the chrY PAR regions
@@ -324,12 +323,14 @@ if(length(set)!=0){
     cat("Removed", length(set), "PAR_Y genes\n")
 }
 
-# Maintain only genes which are present in both NCBI and ENSEMBL (relaxed for testing)
+# Maintain only genes which are present in both NCBI and ENSEMBL
 if(!all(is.na(GENES$Symbol)) && !all(is.na(GENES$IDs))) {
     set <- which(GENES$Symbol == gsub("\\:[0-9]+$", "", GENES$IDs))
     if(length(set)!=0){
-        cat("Found", length(set), "genes with matching Symbol and gene names (keeping all for testing)\n")
-        # GENES <- GENES[set,]  # Disabled for testing
+        cat("Keeping", length(set), "genes with matching Symbol and gene names (present in both NCBI and ENSEMBL)\n")
+        GENES <- GENES[set,]
+    } else {
+        cat("Warning: No genes found with matching Symbol and IDs - this may indicate annotation issues\n")
     }
 }
 
