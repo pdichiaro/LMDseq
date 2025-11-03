@@ -173,6 +173,9 @@ cat("Genes after type filtering:", nrow(all.reads), "\n")
 # Filter low-expressed genes
 cat("Filtering low-expressed genes...\n")
 all.reads_c <- all.reads
+
+# Use Symbol column as rownames (duplicates should be handled upstream in create_reference_db.R)
+cat("Setting rownames using Symbol column...\n")
 rownames(all.reads_c) <- all.reads$Symbol
 
 # Create binary matrix for filtering

@@ -256,6 +256,55 @@ if(!is.null(ref_file) && file.exists(ref_file)) {
     cat("No reference file provided - using GTF annotations only\n")
 }
 
+## ---- Handle duplicate gene symbols ---------
+cat("Handling duplicate gene symbols...\n")
+
+# Handle duplicates in Symbol column using the same approach as IDs column
+dup_symbols <- GENES$Symbol[duplicated(GENES$Symbol)]
+unique_dup_symbols <- unique(dup_symbols[!is.na(dup_symbols)])
+
+if(length(unique_dup_symbols) > 0) {
+    cat("Found", length(unique_dup_symbols), "duplicated symbols to fix\n")
+    
+    for(symbol in unique_dup_symbols){
+        w <- which(GENES$Symbol == symbol & !is.na(GENES$Symbol))
+        if(length(w) == 1){
+            cat(symbol, " not duplicated \n")
+        } else {
+            cat(symbol, " is duplicated (", length(w), " times)\n")
+            # Apply same numbering scheme as IDs: SYMBOL:1, SYMBOL:2, etc.
+            for(j in seq_along(w)) {
+                GENES$Symbol[w[j]] <- paste0(symbol, ":", j)
+            }
+        }
+    }
+} else {
+    cat("No duplicate symbols found\n")
+}
+
+## ---- Handle duplicate gene symbols using the same approach as IDs ---------
+cat("Handling duplicate gene symbols...\n")
+
+# Use the exact same logic as for IDs column
+dup <- GENES$Symbol[duplicated(GENES$Symbol) & !is.na(GENES$Symbol)]
+
+for(ii in dup){ 
+  w <- which(GENES$Symbol==ii) 
+  if(length(w) == 1){ 
+    cat(ii," not duplicated \n") 
+  }else{ 
+    cat(ii," is duplicated \n") 
+    GENES[w[1],"Symbol"] <- paste0(ii,":1") 
+    GENES[w[2],"Symbol"] <- paste0(ii,":2")
+    # Handle cases with more than 2 duplicates
+    if(length(w) > 2) {
+      for(j in 3:length(w)) {
+        GENES[w[j],"Symbol"] <- paste0(ii,":",j)
+      }
+    }
+  } 
+}
+
 ## ---- Filter and clean the data ---------
 cat("Filtering and cleaning data...\n")
 
