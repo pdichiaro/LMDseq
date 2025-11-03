@@ -341,6 +341,11 @@ cat("Creating final output matrix...\n")
 
 # Filter expression data to match cleaned gene annotations
 reads <- all.reads[rownames(GENES), samples, drop=FALSE]
+
+# Convert estimated counts to integers (required for DESeq2 downstream)
+cat("Rounding estimated counts to integers...\n")
+reads[, samples] <- round(reads[, samples])
+
 RES_DAT_ALL <- cbind(GENES, reads)
 
 # Order by transcript ID if available
