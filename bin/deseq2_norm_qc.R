@@ -168,8 +168,6 @@ all.reads <- all.reads[ww,]
 
 cat("Genes after type filtering:", nrow(all.reads), "\n")
 
-# No need to create ALL subdirectory - files will go directly to Counts_folder
-
 # Filter low-expressed genes
 cat("Filtering low-expressed genes...\n")
 all.reads_c <- all.reads
@@ -195,7 +193,7 @@ colnames(Rep_counts_all) <- samples
 rownames(Rep_counts_all) <- rownames(all.reads_c)
 
 for(c in colnames(Rep_counts_all)){
-  w <- which(all.reads_c[,c] > min_reads)
+  w <- which(all.reads_c[,c] >= min_reads)
   Rep_counts_all[w,c] <- 1
 }
 
