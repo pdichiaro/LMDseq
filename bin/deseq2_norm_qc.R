@@ -176,7 +176,18 @@ all.reads_c <- all.reads
 
 # Use Symbol column as rownames (duplicates should be handled upstream in create_reference_db.R)
 cat("Setting rownames using Symbol column...\n")
-rownames(all.reads_c) <- all.reads$Symbol
+
+# Safety check for remaining duplicates
+symbols_to_use <- all.reads$Symbol
+if(any(duplicated(symbols_to_use))) {
+  cat("Warning: Found", sum(duplicated(symbols_to_use)), "duplicate symbols - this should have been handled upstream!\n")
+  cat("Duplicated symbols:", paste(unique(symbols_to_use[duplicated(symbols_to_use)]), collapse=", "), "\n")
+  stop("Duplicate symbols detected - please check create_reference_db.R output")
+} else {
+  cat("No duplicate symbols found - proceeding with Symbol rownames\n")
+}
+
+rownames(all.reads_c) <- symbols_to_use
 
 # Create binary matrix for filtering
 Rep_counts_all <- as.data.frame(matrix(0, nrow=nrow(all.reads_c), ncol=length(samples)))
