@@ -152,8 +152,6 @@ if (has_annotations) {
   all.reads <- cbind(all_name, count_data)
 }
 
-
-
 # Filter by gene type
 cat("Filtering genes by type...\n")
 cat("Available gene types:", unique(all.reads$type_of_gene), "\n")
