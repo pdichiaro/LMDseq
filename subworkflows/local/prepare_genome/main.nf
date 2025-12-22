@@ -85,10 +85,11 @@ workflow PREPARE_GENOME {
     ch_index = Channel.empty()
 
     def use_kallisto = pseudo_aligner == 'kallisto'
-    def index_provided = index != null && (index.name.endsWith('.idx') || index.name.endsWith('.tar.gz'))
+    def index_name = index != null ? (index instanceof String ? index : index.name) : null
+    def index_provided = index_name != null && (index_name.endsWith('.idx') || index_name.endsWith('.tar.gz'))
 
     if (index_provided) {
-        if (index.endsWith('.tar.gz')) {
+        if (index_name.endsWith('.tar.gz')) {
             def ch_untar = UNTAR_KALLISTO_INDEX([ [:], index ]).untar
             ch_index = ch_untar.map { [ [:], it ] }
             ch_versions = ch_versions.mix(UNTAR_KALLISTO_INDEX.out.versions)
