@@ -72,14 +72,12 @@ workflow LMD_RNAseq {
     ch_versions = ch_versions.mix(RNASEQ.out.versions)
 
     emit:
-    multiqc_report          = RNASEQ.out.multiqc_report
-    raw_matrix              = RNASEQ.out.raw_matrix
-    scaling_factors         = RNASEQ.out.scaling_factors
-    normalized_counts       = RNASEQ.out.normalized_counts
-    rlog_counts             = RNASEQ.out.rlog_counts
-    quality_control_plots   = RNASEQ.out.quality_control_plots
-    read_dist_plots         = RNASEQ.out.read_dist_plots
-    versions                = ch_versions
+    multiqc_report      = RNASEQ.out.multiqc_report
+    raw_matrix          = RNASEQ.out.raw_matrix
+    norm_files          = RNASEQ.out.norm_files
+    count_files         = RNASEQ.out.count_files
+    qc_files            = RNASEQ.out.qc_files
+    versions            = ch_versions
 }
 
 
