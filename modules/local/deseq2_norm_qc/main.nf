@@ -12,10 +12,13 @@ process DESEQ2_NORM_QC {
     path sample_metadata
 
     output:
-    path "6_Norm_folder/**"     , emit: norm_files
-    path "7_Counts_folder/**"   , emit: count_files
-    path "8_Quality_folder/**"  , emit: qc_files
-    path "versions.yml"         , emit: versions
+    path "6_Norm_folder/**"                        , emit: norm_files
+    path "7_Counts_folder/**"                      , emit: count_files
+    path "8_Quality_folder/**"                     , emit: qc_files
+    path "deseq2_normalized_counts.txt", optional: true, emit: normalized_counts
+    path "deseq2_rlog_counts.txt", optional: true , emit: rlog_counts
+    path "deseq2.dds.RData", optional: true        , emit: dds_rdata
+    path "versions.yml"                            , emit: versions
 
     when:
     task.ext.when == null || task.ext.when

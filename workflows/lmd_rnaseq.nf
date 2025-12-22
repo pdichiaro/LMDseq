@@ -158,6 +158,9 @@ workflow RNASEQ {
     ch_norm_files = KALLISTO.out.norm_files
     ch_count_files = KALLISTO.out.count_files
     ch_qc_files = KALLISTO.out.qc_files
+    ch_normalized_counts = KALLISTO.out.normalized_counts
+    ch_rlog_counts = KALLISTO.out.rlog_counts
+    ch_dds_rdata = KALLISTO.out.dds_rdata
 
 
     //

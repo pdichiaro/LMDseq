@@ -87,6 +87,9 @@ workflow KALLISTO {
     ch_norm_files = DESEQ2_NORM_QC.out.norm_files
     ch_count_files = DESEQ2_NORM_QC.out.count_files
     ch_qc_files = DESEQ2_NORM_QC.out.qc_files
+    ch_normalized_counts = DESEQ2_NORM_QC.out.normalized_counts
+    ch_rlog_counts = DESEQ2_NORM_QC.out.rlog_counts
+    ch_dds_rdata = DESEQ2_NORM_QC.out.dds_rdata
     ch_versions = ch_versions.mix(DESEQ2_NORM_QC.out.versions)
 
 
@@ -99,6 +102,9 @@ workflow KALLISTO {
     norm_files                    = ch_norm_files        // channel: [ path(6_Norm_folder/**) ]
     count_files                   = ch_count_files       // channel: [ path(7_Counts_folder/**) ]
     qc_files                      = ch_qc_files          // channel: [ path(8_Quality_folder/**) ]
+    normalized_counts             = ch_normalized_counts // channel: [ path(deseq2_normalized_counts.txt) ]
+    rlog_counts                   = ch_rlog_counts       // channel: [ path(deseq2_rlog_counts.txt) ]
+    dds_rdata                     = ch_dds_rdata         // channel: [ path(deseq2.dds.RData) ]
 
     versions                      = ch_versions          // channel: [ versions.yml ]
     multiqc_files                 = ch_pseudo_multiqc    // channel: [ val(meta), files_for_multiqc ]
