@@ -233,8 +233,18 @@ matrix_test <- as.matrix(RAED_MAT[,rownames(colData_test)])
 
 # Note: Integer conversion already handled upstream in create_reference_db.R
 
-# Create DESeq2 dataset
-dds_ex_test <- DESeqDataSetFromMatrix(countData = matrix_test, colData = colData_test, design = ~Bio_replicates)
+# Check if all samples have the same Bio_replicates value
+unique_replicates <- unique(colData_test$Bio_replicates)
+cat("Unique replicate values:", paste(unique_replicates, collapse=", "), "\n")
+
+# Create DESeq2 dataset with appropriate design
+if (length(unique_replicates) == 1) {
+  cat("All samples have the same replicate value - using design ~ 1\n")
+  dds_ex_test <- DESeqDataSetFromMatrix(countData = matrix_test, colData = colData_test, design = ~1)
+} else {
+  cat("Multiple replicate values detected - using design ~ Bio_replicates\n")
+  dds_ex_test <- DESeqDataSetFromMatrix(countData = matrix_test, colData = colData_test, design = ~Bio_replicates)
+}
 dds_ex_test <- estimateSizeFactors(dds_ex_test)
 
 # Save normalization parameters
