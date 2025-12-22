@@ -155,7 +155,11 @@ workflow RNASEQ {
     ch_versions = ch_versions.mix(KALLISTO.out.versions)
     ch_bigwig = KALLISTO.out.bigwig
     ch_raw_matrix = KALLISTO.out.matrix
-    ch_qc_files = KALLISTO.out.qc_files
+    ch_scaling_factors = KALLISTO.out.scaling_factors
+    ch_normalized_counts = KALLISTO.out.normalized_counts
+    ch_rlog_counts = KALLISTO.out.rlog_counts
+    ch_quality_control_plots = KALLISTO.out.quality_control_plots
+    ch_read_dist_plots = KALLISTO.out.read_dist_plots
 
 
     //
@@ -238,10 +242,14 @@ workflow RNASEQ {
 
 
     emit:
-    multiqc_report      = ch_multiqc_report      // channel: /path/to/multiqc_report.html
-    raw_matrix          = ch_raw_matrix          // channel: [ path(EX_reads_RAW.txt) ]
-    qc_files            = ch_qc_files            // channel: [ path(quality_control_files) ]
-    versions            = ch_versions            // channel: [ path(versions.yml) ]
+    multiqc_report          = ch_multiqc_report          // channel: /path/to/multiqc_report.html
+    raw_matrix              = ch_raw_matrix              // channel: [ path(EX_reads_RAW.txt) ]
+    scaling_factors         = ch_scaling_factors         // channel: [ path(scaling_dat.txt) ]
+    normalized_counts       = ch_normalized_counts       // channel: [ path(*_normalized_counts.txt) ]
+    rlog_counts             = ch_rlog_counts             // channel: [ path(*_rlog_counts.txt) ]
+    quality_control_plots   = ch_quality_control_plots   // channel: [ path(Quality_Control/) ]
+    read_dist_plots         = ch_read_dist_plots         // channel: [ path(Read_Distribution/) ]
+    versions                = ch_versions                // channel: [ path(versions.yml) ]
 }
 
 /*

@@ -82,9 +82,13 @@ workflow KALLISTO {
     // DESeq2 normalization and quality control
     DESEQ2_NORM_QC (
         ch_matrix,
-        sample_metadata
+        'kallisto'
     )
-    ch_qc_files = DESEQ2_NORM_QC.out.qc_files
+    ch_scaling_factors = DESEQ2_NORM_QC.out.scaling_factors
+    ch_normalized_counts = DESEQ2_NORM_QC.out.normalized_counts
+    ch_rlog_counts = DESEQ2_NORM_QC.out.rlog_counts
+    ch_quality_control_plots = DESEQ2_NORM_QC.out.quality_control_plots
+    ch_read_dist_plots = DESEQ2_NORM_QC.out.read_dist_plots
     ch_versions = ch_versions.mix(DESEQ2_NORM_QC.out.versions)
 
 
@@ -94,7 +98,11 @@ workflow KALLISTO {
 
     bigwig                        = ch_bigwig            // channel: [ val(meta), scaled_bigwig ]
     matrix                        = ch_matrix            // channel: [ val(meta), gene_expression_matrix ]
-    qc_files                      = ch_qc_files          // channel: [ path(quality_control_files) ]
+    scaling_factors               = ch_scaling_factors   // channel: [ path(scaling_dat.txt) ]
+    normalized_counts             = ch_normalized_counts // channel: [ path(*_normalized_counts.txt) ]
+    rlog_counts                   = ch_rlog_counts       // channel: [ path(*_rlog_counts.txt) ]
+    quality_control_plots         = ch_quality_control_plots // channel: [ path(Quality_Control/) ]
+    read_dist_plots               = ch_read_dist_plots   // channel: [ path(Read_Distribution/) ]
 
     versions                      = ch_versions          // channel: [ versions.yml ]
     multiqc_files                 = ch_pseudo_multiqc    // channel: [ val(meta), files_for_multiqc ]
