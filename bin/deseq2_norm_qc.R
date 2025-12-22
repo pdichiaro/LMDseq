@@ -233,18 +233,13 @@ matrix_test <- as.matrix(RAED_MAT[,rownames(colData_test)])
 
 # Note: Integer conversion already handled upstream in create_reference_db.R
 
-# Check if all samples have the same Bio_replicates value
-unique_replicates <- unique(colData_test$Bio_replicates)
-cat("Unique replicate values:", paste(unique_replicates, collapse=", "), "\n")
-
-# Create DESeq2 dataset with appropriate design
-if (length(unique_replicates) == 1) {
-  cat("All samples have the same replicate value - using design ~ 1\n")
-  dds_ex_test <- DESeqDataSetFromMatrix(countData = matrix_test, colData = colData_test, design = ~1)
-} else {
-  cat("Multiple replicate values detected - using design ~ Bio_replicates\n")
-  dds_ex_test <- DESeqDataSetFromMatrix(countData = matrix_test, colData = colData_test, design = ~Bio_replicates)
-}
+# Create DESeq2 dataset with design ~ 1
+# Using intercept-only model (design=~1) for normalization and QC, consistent with nf-core/rnaseq approach.
+# This is equivalent to setting blind=TRUE for variance-stabilizing transformation.
+# This design works for all sample configurations (single or multiple replicates) and is appropriate
+# for normalization, size factor estimation, and quality control analyses.
+cat("Creating DESeq2 dataset with design ~ 1 for normalization and QC\n")
+dds_ex_test <- DESeqDataSetFromMatrix(countData = matrix_test, colData = colData_test, design = ~1)
 dds_ex_test <- estimateSizeFactors(dds_ex_test)
 
 # Save normalization parameters
