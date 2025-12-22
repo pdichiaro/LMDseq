@@ -155,3 +155,4 @@ The data will appear in the MultiQC report under the "DESeq2" section.
 - PCA uses VST-transformed counts
 - Sample distances use Euclidean distance on VST-transformed data
 - Read distribution statistics calculated on DESeq2-normalized counts
+- Script automatically handles both single and multiple replicate scenarios (see DESEQ2_DESIGN_FIX.md)
