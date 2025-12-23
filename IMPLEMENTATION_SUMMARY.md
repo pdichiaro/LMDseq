@@ -134,12 +134,18 @@ gg <- ggplot(pcaData, aes(PC1, PC2, color=Bio_replicates, label=name)) +
   theme(aspect.ratio = 1)
 ```
 
+#### Configuration:
+```r
+# Use ALL genes for PCA (no limitation)
+ntop_pca <- nrow(matrix_test)
+cat("Using all", ntop_pca, "genes for PCA\n")
+```
+
 #### Benefits:
 - ✅ No more viewport errors
-- ✅ Faster computation (500 vs 14,193 genes)
-- ✅ Better biological interpretation
-- ✅ Follows field standards
-- ✅ Consistent with nf-core/rnaseq
+- ✅ Complete data representation (all genes)
+- ✅ No information loss from gene selection
+- ✅ Robust ggplot2 rendering
 
 **Documentation:** `PCA_FIX.md`
 
