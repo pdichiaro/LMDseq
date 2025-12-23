@@ -477,12 +477,7 @@ intgroup.df <- as.data.frame(colData(vsd)[, intgroup, drop = FALSE])
 d <- data.frame(pca$x, intgroup.df, name = colnames(vsd))
 attr(d, "percentVar") <- percentVar[1:2]
 
-# Plot variance explained
-pdf(file.path(Quality_folder, "Percent_var_PCA.pdf"))
-barplot(percentVar, ylim=c(0,100))
-dev.off()
-
-# 3D PCA and corrplot removed per user request 
+# Percent_var_PCA, 3D PCA, and corrplot removed per user request 
 
 cat("DESeq2 normalization and QC analysis completed successfully!\n")
 cat("Output files saved to:", output_dir, "\n")
