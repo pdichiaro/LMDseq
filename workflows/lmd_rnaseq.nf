@@ -44,11 +44,6 @@ include { methodsDescriptionText           } from '../subworkflows/local/utils_n
 //ch_clustering_header_multiqc    = file("$projectDir/workflows/assets/multiqc/deseq2_clustering_header.txt", checkIfExists: true)
 //ch_biotypes_header_multiqc      = file("$projectDir/workflows/assets/multiqc/biotypes_header.txt", checkIfExists: true)
 //ch_dummy_file                   = ch_pca_header_multiqc
-ch_multiqc_config = Channel.empty()
-ch_multiqc_custom_config = Channel.empty()
-ch_multiqc_logo = Channel.empty()
-ch_replace_names = Channel.empty()
-ch_sample_names = Channel.empty()
 
 workflow RNASEQ {
     
@@ -64,8 +59,9 @@ workflow RNASEQ {
     main:
     ch_multiqc_files = Channel.empty()
     ch_versions = Channel.empty()
-
-  
+    ch_multiqc_config = Channel.empty()
+    ch_multiqc_custom_config = Channel.empty()
+    ch_multiqc_logo = Channel.empty()
 
     // -----------------------
     // Run FASTQ preprocessing
@@ -115,6 +111,17 @@ workflow RNASEQ {
             [ meta, files ]
         }
         .filter { it != null }
+    
+    // Fork the channel for later reuse in MultiQC name replacement
+    ch_input
+        .multiMap { meta, reads ->
+            fastq: [meta, reads]
+            for_multiqc: [meta, reads]
+        }
+        .set { ch_input_forked }
+    
+    ch_input = ch_input_forked.fastq
+    ch_input_for_multiqc = ch_input_forked.for_multiqc
 
 
     // -----------------------
@@ -208,7 +215,7 @@ workflow RNASEQ {
         // for single-techrep samples not processed by CAT_FASTQ, and trims out
         // _raw or _trimmed
 
-        ch_name_replacements = ch_input
+        ch_name_replacements = ch_input_for_multiqc
             .map{ meta, reads ->
                 // Add null safety for reads
                 if (!reads || reads.isEmpty() || reads[0] == null) {

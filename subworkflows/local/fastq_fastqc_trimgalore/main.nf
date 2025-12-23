@@ -79,9 +79,9 @@ workflow FASTQ_FASTQC_TRIMGALORE {
     trim_log
 
     versions = ch_versions
-    multiqc_files = raw_fastqc_html.mix(raw_fastqc_zip)
-                                  .mix(trim_fastqc_html)
-                                  .mix(trim_fastqc_zip)
+    multiqc_files = fastqc_html_raw.mix(fastqc_zip_raw)
+                                  .mix(fastqc_html_trimmed)
+                                  .mix(fastqc_zip_trimmed)
                                   .mix(trim_html)
                                   .mix(trim_zip)
                                   .mix(trim_log)
