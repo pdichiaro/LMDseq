@@ -236,7 +236,7 @@ workflow RNASEQ {
             ch_multiqc_custom_config.toList(),
             ch_multiqc_logo.toList(),
             ch_name_replacements,
-            []
+            ch_sample_names.toList()
         )
         ch_multiqc_report = MULTIQC.out.report
     }
