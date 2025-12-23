@@ -485,24 +485,33 @@ pdf(file.path(Quality_folder, "Percent_var_PCA.pdf"))
 barplot(percentVar, ylim=c(0,100))
 dev.off()
 
-# 3D PCA plots
-tryCatch({
-  p <- plot_ly(d, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Bio_replicates, colors = "Set1", 
-               marker = list(size=10, opacity=0.5))
-  saveWidget(p, file=file.path(Quality_folder, "3D_PCA_Bio_replicates.html"), selfcontained=FALSE)
-  
-  p <- plot_ly(d, x = ~PC1, y = ~PC2, z = ~PC3, color = ~name, colors = "Set1", 
-               marker = list(size=10, opacity=0.5))
-  saveWidget(p, file=file.path(Quality_folder, "3D_PCA_Samples.html"), selfcontained=FALSE)
-}, error = function(e) {
-  cat("Warning: Could not create 3D PCA plots:", e$message, "\n")
-})
+# 3D PCA plots (only if PC3 exists)
+if("PC3" %in% colnames(d)) {
+  tryCatch({
+    p <- plot_ly(d, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Bio_replicates, colors = "Set1", 
+                 marker = list(size=10, opacity=0.5))
+    saveWidget(p, file=file.path(Quality_folder, "3D_PCA_Bio_replicates.html"), selfcontained=FALSE)
+    
+    p <- plot_ly(d, x = ~PC1, y = ~PC2, z = ~PC3, color = ~name, colors = "Set1", 
+                 marker = list(size=10, opacity=0.5))
+    saveWidget(p, file=file.path(Quality_folder, "3D_PCA_Samples.html"), selfcontained=FALSE)
+  }, error = function(e) {
+    cat("Warning: Could not create 3D PCA plots:", e$message, "\n")
+  })
+} else {
+  cat("Skipping 3D PCA plots: Less than 3 principal components available\n")
+}
 
-# PCA correlation plot
-pdf(file.path(Quality_folder, "All_pca.pdf"))
-corrplot(as.matrix(d[,1:min(ncol(d), 10)]), is.corr=FALSE, tl.cex = 0.7, cl.cex = 0.4, 
-         rect.lwd = 0.1, cl.pos = "b")
-dev.off() 
+# PCA correlation plot - use only PC columns (numeric)
+pc_cols <- grep("^PC[0-9]+$", colnames(d), value = TRUE)
+if(length(pc_cols) > 1) {
+  pdf(file.path(Quality_folder, "All_pca.pdf"))
+  corrplot(as.matrix(d[, pc_cols[1:min(length(pc_cols), 10)]]), is.corr=FALSE, 
+           tl.cex = 0.7, cl.cex = 0.4, rect.lwd = 0.1, cl.pos = "b")
+  dev.off()
+} else {
+  cat("Skipping PCA correlation plot: Not enough principal components\n")
+} 
 
 cat("DESeq2 normalization and QC analysis completed successfully!\n")
 cat("Output files saved to:", output_dir, "\n")
