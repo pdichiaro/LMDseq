@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document summarizes the recent improvements made to the LMDseq pipeline, focusing on MultiQC integration, DESeq2 design formula strategy, and PCA optimization.
+This document summarizes the recent improvements made to the LMDseq pipeline, focusing on MultiQC integration, DESeq2 design formula strategy, PCA optimization, and robustness fixes for small datasets.
 
 ## Changes Implemented
 
@@ -151,6 +151,65 @@ cat("Using all", ntop_pca, "genes for PCA\n")
 
 ---
 
+### 4. Small Dataset Robustness ✅
+
+**Commit:** `f79e270`
+
+Fixed errors when analyzing datasets with fewer than 3 samples.
+
+#### Problems Fixed:
+
+**1. 3D PCA Plot Error:**
+```
+Warning: Could not create 3D PCA plots: object 'PC3' not found
+```
+- **Cause:** PCA with < 3 samples generates < 3 principal components
+- **Solution:** Check if PC3 exists before creating 3D plots
+
+**2. Corrplot Error:**
+```
+Error in r[i1] - r[-length(r):-(length(r) - lag + 1L)] : 
+  non-numeric argument to binary operator
+```
+- **Cause:** Corrplot received non-numeric columns (Bio_replicates, name)
+- **Solution:** Use regex to select only PC columns
+
+#### Implementation:
+
+```r
+# 3D PCA plots (only if PC3 exists)
+if("PC3" %in% colnames(d)) {
+  tryCatch({
+    p <- plot_ly(d, x = ~PC1, y = ~PC2, z = ~PC3, ...)
+    saveWidget(p, file=file.path(Quality_folder, "3D_PCA_Bio_replicates.html"), ...)
+  }, error = function(e) {
+    cat("Warning: Could not create 3D PCA plots:", e$message, "\n")
+  })
+} else {
+  cat("Skipping 3D PCA plots: Less than 3 principal components available\n")
+}
+
+# PCA correlation plot - use only PC columns (numeric)
+pc_cols <- grep("^PC[0-9]+$", colnames(d), value = TRUE)
+if(length(pc_cols) > 1) {
+  pdf(file.path(Quality_folder, "All_pca.pdf"))
+  corrplot(as.matrix(d[, pc_cols[1:min(length(pc_cols), 10)]]), is.corr=FALSE, ...)
+  dev.off()
+} else {
+  cat("Skipping PCA correlation plot: Not enough principal components\n")
+}
+```
+
+#### Benefits:
+- ✅ Pipeline completes with 2+ samples (no failures)
+- ✅ Graceful handling of missing PC3
+- ✅ Only numeric data for corrplot
+- ✅ Informative console messages
+
+**Documentation:** `PCA_CORRPLOT_FIX.md`
+
+---
+
 ## Files Modified
 
 ### Core Scripts
@@ -165,7 +224,8 @@ cat("Using all", ntop_pca, "genes for PCA\n")
 ### Documentation (New)
 - `MULTIQC_INTEGRATION.md` - MultiQC integration details
 - `DESEQ2_DESIGN_FIX.md` - Design formula strategy explanation
-- `PCA_FIX.md` - PCA optimization and viewport error fix
+- `PCA_FIX.md` - PCA viewport error fix (all genes + ggplot2 fix)
+- `PCA_CORRPLOT_FIX.md` - 3D PCA and corrplot robustness fix
 - `IMPLEMENTATION_SUMMARY.md` - This document
 
 ---
@@ -191,6 +251,8 @@ All files are created in `8_Quality_folder/`:
 ## Compatibility
 
 ### Works With:
+- ✅ Small datasets (2+ samples)
+- ✅ Large datasets (any number of samples)
 - ✅ Single replicate samples
 - ✅ Multiple replicate samples
 - ✅ Any experimental design
@@ -228,6 +290,9 @@ multiqc results/
 - ✅ R syntax validation passed
 - ✅ MultiQC TSV format validated
 - ✅ Design ~ 1 tested with sample data
+- ✅ PCA with all genes tested
+- ✅ Small dataset compatibility (2+ samples) validated
+- ✅ 3D PCA and corrplot robustness confirmed
 - ✅ Backward compatibility confirmed
 - ✅ Documentation complete
 
@@ -235,11 +300,15 @@ multiqc results/
 
 ## Benefits
 
-1. **Robustness**: No more errors with identical replicates
+1. **Robustness**: 
+   - No more errors with identical replicates
+   - Handles small datasets (2+ samples)
+   - Graceful handling of missing PCs
 2. **Consistency**: Matches nf-core standards
 3. **Visibility**: DESeq2 QC metrics in MultiQC reports
 4. **Flexibility**: Works with any sample configuration
-5. **Documentation**: Comprehensive explanations provided
+5. **Completeness**: PCA with all genes (no information loss)
+6. **Documentation**: Comprehensive explanations provided
 
 ---
 
