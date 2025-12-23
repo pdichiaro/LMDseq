@@ -1,12 +1,12 @@
 # LMDseq Implementation Summary
 
-**Date:** 2025-12-22  
+**Last Updated:** 2025-12-23  
 **Repository:** pdichiaro/LMDseq  
 **Branch:** main
 
 ## Overview
 
-This document summarizes the recent improvements made to the LMDseq pipeline, focusing on MultiQC integration and DESeq2 design formula strategy.
+This document summarizes the recent improvements made to the LMDseq pipeline, focusing on MultiQC integration, DESeq2 design formula strategy, and PCA optimization.
 
 ## Changes Implemented
 
@@ -93,6 +93,58 @@ dds <- DESeqDataSetFromMatrix(countData=round(counts),
 
 ---
 
+### 3. PCA Optimization and Viewport Fix ✅
+
+**Commit:** `472895e`, `1d3bff4`
+
+Fixed viewport error during PCA plot generation and optimized PCA to use top 500 most variable genes.
+
+#### Problem Solved:
+```
+Error in grid.Call(C_convert, x, as.integer(whatfrom), as.integer(whatto),  : 
+  Viewport has zero dimension(s)
+```
+
+Previously using all 14,193 genes which caused:
+- Viewport calculation errors
+- Slow computation
+- Not following best practices
+
+#### Changes Made:
+- **Limit PCA to top 500 genes**: Standard practice, used by nf-core/rnaseq
+- **Fix plot rendering**: Replace `coord_fixed()` with `theme(aspect.ratio = 1)`
+- **Add max.overlaps**: Prevent label hiding in `geom_text_repel()`
+- **Explicit dimensions**: Add `units = "in"` to `ggsave()`
+- **Apply to both PCA sections**: Main and extended PCA analysis
+
+#### Code:
+```r
+# Use top 500 most variable genes for PCA (consistent with nf-core/rnaseq)
+ntop_pca <- min(500, nrow(matrix_test))
+cat("Using top", ntop_pca, "most variable genes for PCA\n")
+pcaData <- plotPCA(vsd, intgroup = c("Bio_replicates"), ntop = ntop_pca, returnData=TRUE)
+
+# Create PCA plot with proper dimensions
+gg <- ggplot(pcaData, aes(PC1, PC2, color=Bio_replicates, label=name)) +
+  geom_point(size=3) +
+  geom_text_repel(max.overlaps = Inf, size = 3) +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  theme_classic() +
+  theme(aspect.ratio = 1)
+```
+
+#### Benefits:
+- ✅ No more viewport errors
+- ✅ Faster computation (500 vs 14,193 genes)
+- ✅ Better biological interpretation
+- ✅ Follows field standards
+- ✅ Consistent with nf-core/rnaseq
+
+**Documentation:** `PCA_FIX.md`
+
+---
+
 ## Files Modified
 
 ### Core Scripts
@@ -107,6 +159,7 @@ dds <- DESeqDataSetFromMatrix(countData=round(counts),
 ### Documentation (New)
 - `MULTIQC_INTEGRATION.md` - MultiQC integration details
 - `DESEQ2_DESIGN_FIX.md` - Design formula strategy explanation
+- `PCA_FIX.md` - PCA optimization and viewport error fix
 - `IMPLEMENTATION_SUMMARY.md` - This document
 
 ---
