@@ -438,19 +438,24 @@ dev.off()
 
 # PCA analysis
 cat("Performing PCA analysis...\n")
-pcaData <- plotPCA(vsd, intgroup = c("Bio_replicates"), ntop = nrow(matrix_test), returnData=TRUE)
+# Use top 500 most variable genes for PCA (consistent with nf-core/rnaseq)
+ntop_pca <- min(500, nrow(matrix_test))
+cat("Using top", ntop_pca, "most variable genes for PCA\n")
+pcaData <- plotPCA(vsd, intgroup = c("Bio_replicates"), ntop = ntop_pca, returnData=TRUE)
 percentVar <- round(100*attr(pcaData,"percentVar"))
 
+# Create PCA plot with proper dimensions
 gg <- ggplot(pcaData, aes(PC1, PC2, color=Bio_replicates, label=name)) +
-  geom_text_repel() +
   geom_point(size=3) +
+  geom_text_repel(max.overlaps = Inf, size = 3) +
   xlab(paste0("PC1: ", percentVar[1], "% variance")) +
   ylab(paste0("PC2: ", percentVar[2], "% variance")) +
-  coord_fixed() +
-  theme_classic()
+  theme_classic() +
+  theme(aspect.ratio = 1)
 
+# Save with explicit dimensions to avoid viewport errors
 ggsave("PCA_rlogTransformedID.pdf", plot = gg, device="pdf", useDingbats=FALSE, 
-       width=10, height=10, path=Quality_folder, limitsize = FALSE)
+       width=10, height=10, path=Quality_folder, limitsize = FALSE, units = "in")
 
 # Export PCA data for MultiQC
 pca_export <- pcaData[, c("PC1", "PC2", "Bio_replicates")]
@@ -463,7 +468,8 @@ write_multiqc_tsv(
 )
 
 # Extended PCA analysis
-ntop = nrow(assay(vsd))
+# Use top 500 most variable genes (consistent with main PCA analysis)
+ntop = min(500, nrow(assay(vsd)))
 intgroup = c("Bio_replicates")
 rv <- rowVars(assay(vsd))
 select <- order(rv, decreasing = TRUE)[seq_len(min(ntop, length(rv)))]
