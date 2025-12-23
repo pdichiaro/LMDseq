@@ -59,9 +59,6 @@ workflow RNASEQ {
     main:
     ch_multiqc_files = Channel.empty()
     ch_versions = Channel.empty()
-    ch_multiqc_config = Channel.empty()
-    ch_multiqc_custom_config = Channel.empty()
-    ch_multiqc_logo = Channel.empty()
 
     // -----------------------
     // Run FASTQ preprocessing
