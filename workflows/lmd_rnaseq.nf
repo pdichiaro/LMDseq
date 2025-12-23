@@ -178,9 +178,10 @@ workflow RNASEQ {
     if (!params.skip_multiqc) {
 
         // Load MultiQC configuration files
-        ch_multiqc_config        = Channel.fromPath("$projectDir/workflows/assets/multiqc/multiqc_config.yml", checkIfExists: true)
-        ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config) : Channel.empty()
-        ch_multiqc_logo          = params.multiqc_logo   ? Channel.fromPath(params.multiqc_logo)   : Channel.empty()
+        def multiqc_config_file = file("$projectDir/workflows/assets/multiqc/multiqc_config.yml")
+        ch_multiqc_config        = multiqc_config_file.exists() ? Channel.fromPath(multiqc_config_file) : Channel.empty()
+        ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true) : Channel.empty()
+        ch_multiqc_logo          = params.multiqc_logo   ? Channel.fromPath(params.multiqc_logo, checkIfExists: true)   : Channel.empty()
 
         // Prepare the workflow summary
         ch_workflow_summary = Channel.value(
