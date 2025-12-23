@@ -438,9 +438,9 @@ dev.off()
 
 # PCA analysis
 cat("Performing PCA analysis...\n")
-# Use top 500 most variable genes for PCA (consistent with nf-core/rnaseq)
-ntop_pca <- min(500, nrow(matrix_test))
-cat("Using top", ntop_pca, "most variable genes for PCA\n")
+# Use all genes for PCA
+ntop_pca <- nrow(matrix_test)
+cat("Using all", ntop_pca, "genes for PCA\n")
 pcaData <- plotPCA(vsd, intgroup = c("Bio_replicates"), ntop = ntop_pca, returnData=TRUE)
 percentVar <- round(100*attr(pcaData,"percentVar"))
 
@@ -468,8 +468,8 @@ write_multiqc_tsv(
 )
 
 # Extended PCA analysis
-# Use top 500 most variable genes (consistent with main PCA analysis)
-ntop = min(500, nrow(assay(vsd)))
+# Use all genes (consistent with main PCA analysis)
+ntop = nrow(assay(vsd))
 intgroup = c("Bio_replicates")
 rv <- rowVars(assay(vsd))
 select <- order(rv, decreasing = TRUE)[seq_len(min(ntop, length(rv)))]
