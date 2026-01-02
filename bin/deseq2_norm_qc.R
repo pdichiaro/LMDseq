@@ -77,26 +77,6 @@ dir.create(Norm_folder, showWarnings = FALSE, recursive = TRUE)
 dir.create(Counts_folder, showWarnings = FALSE, recursive = TRUE)
 dir.create(Quality_folder, showWarnings = FALSE, recursive = TRUE)
 
-# Function to write MultiQC TSV files with DESeq2 header
-write_multiqc_tsv <- function(data, filename, section_name, description) {
-  # Create header lines
-  header_lines <- c(
-    "# plot_type: 'table'",
-    paste0("# section_name: '", section_name, "'"),
-    paste0("# description: '", description, "'"),
-    "# pconfig:",
-    "#     id: 'deseq2_custom_data'",
-    "#     namespace: 'DESeq2'"
-  )
-  
-  # Write header
-  writeLines(header_lines, filename)
-  
-  # Append data table
-  write.table(data, filename, append = TRUE, sep = "\t", 
-              quote = FALSE, row.names = TRUE, col.names = NA)
-}
-
 # Read metadata file (Sample.txt)
 cat("Reading metadata file...\n")
 MASTER_FILE <- read.delim(metadata_file, header=TRUE)
@@ -330,20 +310,6 @@ print(p.2)
 print(p.3)
 dev.off()
 
-# Export read distribution statistics for MultiQC
-read_stats <- data.frame(
-  Total_Reads = colSums(all.reads_d[, samples]),
-  Mean_Counts = colMeans(all.reads_d[, samples]),
-  Median_Counts = apply(all.reads_d[, samples], 2, median),
-  Genes_Detected = colSums(all.reads_d[, samples] > 0)
-)
-write_multiqc_tsv(
-  read_stats,
-  file.path(Quality_folder, "deseq2_read_distribution_mqc.tsv"),
-  "DESeq2 Read Distribution",
-  "Read distribution statistics for normalized and filtered data"
-)
-
 # Quality control analysis
 cat("Performing quality control analysis...\n")
 dir.create(Quality_folder, showWarnings = FALSE, recursive = TRUE)
@@ -377,14 +343,6 @@ pheatmap(sampleDistMatrix,
          border_color = FALSE,
          col = colors)
 dev.off()
-
-# Export sample distances for MultiQC
-write_multiqc_tsv(
-  sampleDistMatrix,
-  file.path(Quality_folder, "deseq2_sample_distances_mqc.tsv"),
-  "DESeq2 Sample Distances",
-  "Sample-to-sample Euclidean distances (VST-transformed)"
-)
 
 # Poisson distance
 poisd <- PoissonDistance(t(counts(dds_ex_test)))
@@ -435,16 +393,6 @@ gg <- ggplot(pcaData, aes(PC1, PC2, color=Bio_replicates, label=name)) +
 ggsave("PCA_rlogTransformed.pdf", plot = gg, device="pdf", useDingbats=FALSE, 
        width=10, height=10, path=Quality_folder, limitsize = FALSE, units = "in")
 
-# Export PCA data for MultiQC
-pca_export <- pcaData[, c("PC1", "PC2", "Bio_replicates")]
-rownames(pca_export) <- pcaData$name
-write_multiqc_tsv(
-  pca_export,
-  file.path(Quality_folder, "deseq2_pca_mqc.tsv"),
-  "DESeq2 PCA",
-  paste0("Principal Component Analysis - PC1: ", percentVar[1], "%, PC2: ", percentVar[2], "%")
-)
-
 # Extended PCA analysis
 # Use all genes (consistent with main PCA analysis)
 ntop = nrow(assay(vsd))
@@ -458,7 +406,6 @@ intgroup.df <- as.data.frame(colData(vsd)[, intgroup, drop = FALSE])
 d <- data.frame(pca$x, intgroup.df, name = colnames(vsd))
 attr(d, "percentVar") <- percentVar[1:2]
 
-# Percent_var_PCA, 3D PCA, and corrplot removed per user request 
 
 cat("DESeq2 normalization and QC analysis completed successfully!\n")
 cat("Output files saved to:", output_dir, "\n")
