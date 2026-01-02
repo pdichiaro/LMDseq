@@ -84,7 +84,7 @@ Your FASTQ files should be organized as follows:
 
 The LMDseq pipeline offers flexible reference genome options and output formats to suit different analysis needs.
 
-### 🎯 Quick Start Examples
+### Quick Start Examples
 
 #### **1. Basic Analysis (Minimal Output)**
 ```bash
@@ -171,7 +171,6 @@ nextflow run pdichiaro/LMDseq \
 | `--extra_trimgalore_args` | String | `'--clip_R2 3 --quality 20 --stringency 3 --length 20'` | TrimGalore arguments |
 | `--skip_fastqc` | Boolean | `false` | Skip FastQC analysis |
 | `--skip_trimming` | Boolean | `false` | Skip adapter trimming |
-| `--skip_multiqc` | Boolean | `false` | Skip MultiQC report generation |
 
 ###  DESeq2 QC Parameters
 
@@ -289,7 +288,6 @@ nextflow run pdichiaro/LMDseq \
 
 #### Quality Control
 - `--skip_fastqc`: Skip FastQC analysis
-- `--skip_multiqc`: Skip MultiQC report generation
 
 #### Process Skipping
 - `--skip_trimming`: Skip adapter trimming step
@@ -333,7 +331,6 @@ The pipeline generates different matrix formats depending on whether a reference
 | `PCA_rlogTransformed.pdf` | Principal component analysis plots |
 | `Heatmap_sampleTosample_correlation.pdf` | Sample correlation matrix |
 | `Heatmap_sampleTosample_distances.pdf` | Sample distance clustering |
-| `3D_PCA_Bio_replicates.html` | Interactive 3D PCA visualization |
 
 #### **Coverage and Visualization**
 | File | Description |
@@ -388,8 +385,6 @@ nextflow run pdichiaro/LMDseq -profile test_lmd --outdir test_results
 # Check version
 nextflow run pdichiaro/LMDseq --version
 ```
-
----
 
 
 ## Support and Citation
