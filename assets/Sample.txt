@@ -1,0 +1,3 @@
+SID	SHORT_NAME	REPLICATE	RID	strandedness	FASTQ_FOLDER
+LCM_1	20942_1D3_A1	R1	S61303	reverse	/hpcnfs/techunits/genomics/PublicData/Natoli/spollett/FASTQ/250403_A00302_0704_BHN7FNDRX5/Sample_S61303_LCM_1
+LCM_2	20942_1D3_B1	R2	S61304	reverse	/hpcnfs/techunits/genomics/PublicData/Natoli/spollett/FASTQ/250403_A00302_0704_BHN7FNDRX5/Sample_S61304_LCM_2

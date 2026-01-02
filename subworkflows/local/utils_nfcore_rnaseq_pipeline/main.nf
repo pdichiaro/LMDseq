@@ -1,0 +1,504 @@
+//
+// Subworkflow with functionality specific to the nf-core/rnaseq pipeline
+//
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    IMPORT FUNCTIONS / MODULES / SUBWORKFLOWS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+include { UTILS_NFSCHEMA_PLUGIN     } from '../../nf-core/utils_nfschema_plugin'
+include { paramsSummaryMap          } from 'plugin/nf-schema'
+include { completionEmail           } from '../../nf-core/utils_nfcore_pipeline'
+include { completionSummary         } from '../../nf-core/utils_nfcore_pipeline'
+include { imNotification            } from '../../nf-core/utils_nfcore_pipeline'
+include { UTILS_NFCORE_PIPELINE     } from '../../nf-core/utils_nfcore_pipeline'
+include { UTILS_NEXTFLOW_PIPELINE   } from '../../nf-core/utils_nextflow_pipeline'
+include { logColours                } from '../../nf-core/utils_nfcore_pipeline'
+
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    SUBWORKFLOW TO INITIALISE PIPELINE
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+workflow PIPELINE_INITIALISATION {
+
+    take:
+    version           // boolean: Display version and exit
+    validate_params   // boolean: Boolean whether to validate parameters against the schema at runtime
+    monochrome_logs   // boolean: Do not use coloured log outputs
+    nextflow_cli_args //   array: List of positional nextflow CLI args
+    outdir            //  string: The output directory where the results will be saved
+
+    main:
+
+    ch_versions = Channel.empty()
+
+    //
+    // Print version and exit if required and dump pipeline parameters to JSON file
+    //
+    UTILS_NEXTFLOW_PIPELINE (
+        version,
+        true,
+        outdir,
+        workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1
+    )
+
+    //
+    // Validate parameters and generate parameter summary to stdout
+    //
+    UTILS_NFSCHEMA_PLUGIN (
+        workflow,
+        validate_params,
+        null
+    )
+
+    //
+    // Check config provided to the pipeline
+    //
+    UTILS_NFCORE_PIPELINE (
+        nextflow_cli_args
+    )
+
+    //
+    // Custom validation for pipeline parameters
+    //
+    validateInputParameters()
+
+    emit:
+    versions    = ch_versions
+}
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    SUBWORKFLOW FOR PIPELINE COMPLETION
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+workflow PIPELINE_COMPLETION {
+
+    take:
+    email           //  string: email address
+    email_on_fail   //  string: email address sent on pipeline failure
+    plaintext_email // boolean: Send plain-text email instead of HTML
+    outdir          //    path: Path to output directory where results will be published
+    monochrome_logs // boolean: Disable ANSI colour codes in log output
+    hook_url        //  string: hook URL for notifications
+    multiqc_report  //  string: Path to MultiQC report
+    trim_status        // map: pass/fail status per sample for trimming
+    map_status         // map: pass/fail status per sample for mapping
+    strand_status      // map: pass/fail status per sample for strandedness check (unused in LMD pipeline)
+
+    main:
+    def pass_mapped_reads  = [:]
+    def pass_trimmed_reads = [:]
+    def pass_strand_check  = [:]
+
+    summary_params = paramsSummaryMap(workflow, parameters_schema: "nextflow_schema.json")
+    def multiqc_reports = multiqc_report.toList()
+
+    trim_status
+        .map{
+            id, status -> pass_trimmed_reads[id] = status
+        }
+
+    map_status
+        .map{
+            id, status -> pass_mapped_reads[id] = status
+        }
+
+    // strand_status processing skipped - not used in LMD pipeline
+
+    //
+    // Completion email and summary
+    //
+    workflow.onComplete {
+        if (email || email_on_fail) {
+            completionEmail(
+                summary_params,
+                email,
+                email_on_fail,
+                plaintext_email,
+                outdir,
+                monochrome_logs,
+                multiqc_reports.getVal(),
+            )
+        }
+
+        rnaseqSummary(monochrome_logs, pass_mapped_reads, pass_trimmed_reads, pass_strand_check)
+
+        if (hook_url) {
+            imNotification(summary_params, hook_url)
+        }
+    }
+
+    workflow.onError {
+        log.error "Pipeline failed. Please check the error messages above for more details."
+    }
+}
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    FUNCTIONS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+//
+// Function to check samples are internally consistent after being grouped
+//
+def checkSamplesAfterGrouping(input) {
+    def (metas, fastqs) = input[1..2]
+
+    // Check that multiple runs of the same sample are of the same strandedness
+    def strandedness_ok = metas.collect{ it.strandedness }.unique().size == 1
+    if (!strandedness_ok) {
+        error("Please check input samplesheet -> Multiple runs of a sample must have the same strandedness!: ${metas[0].id}")
+    }
+
+    // Check that multiple runs of the same sample are of the same datatype i.e. single-end / paired-end
+    def endedness_ok = metas.collect{ meta -> meta.single_end }.unique().size == 1
+    if (!endedness_ok) {
+        error("Please check input samplesheet -> Multiple runs of a sample must be of the same datatype i.e. single-end or paired-end: ${metas[0].id}")
+    }
+
+    return [ metas[0], fastqs ]
+}
+
+//
+// Check and validate pipeline parameters
+//
+def validateInputParameters() {
+
+    genomeExistsError()
+
+    if (!params.fasta && !params.transcript_fasta) {
+        error("Genome fasta file not specified with e.g. '--fasta genome.fa' or via a detectable config file. You must supply a genome FASTA file or provide your own transcript fasta using --transcript_fasta for quantification.")
+    }
+
+    if (!params.gtf && !params.gff) {
+        error("No GTF or GFF3 annotation specified! The pipeline requires at least one of these files.")
+    }
+
+    if (params.gtf) {
+        if (params.gff) {
+            gtfGffWarn()
+        }
+        if (params.genome == 'GRCh38' && params.gtf.contains('Homo_sapiens/NCBI/GRCh38/Annotation/Genes/genes.gtf')) {
+            ncbiGenomeWarn()
+        }
+        if (params.gtf.contains('/UCSC/') && params.gtf.contains('Annotation/Genes/genes.gtf')) {
+            ucscGenomeWarn()
+        }
+    }
+
+    if (params.transcript_fasta) {
+        transcriptsFastaWarn()
+    }
+
+    if (!params.skip_bbsplit && !params.bbsplit_index && !params.bbsplit_fasta_list) {
+        error("Please provide either --bbsplit_fasta_list / --bbsplit_index to run BBSplit.")
+    }
+
+
+
+
+
+    if (!params.skip_pseudo_alignment && params.pseudo_aligner == 'kallisto') {
+        if (!(params.transcript_fasta || (params.fasta && (params.gtf || params.gff)))) {
+            error("To use Kallisto pseudo-alignment, you must provide either --transcript_fasta or both --fasta and --gtf / --gff.")
+        }
+    }
+
+    // Check if file with list of fastas is provided when running BBSplit
+    if (!params.skip_bbsplit && !params.bbsplit_index && params.bbsplit_fasta_list) {
+        def ch_bbsplit_fasta_list = file(params.bbsplit_fasta_list)
+        if (ch_bbsplit_fasta_list.isEmpty()) {
+            error("File provided with --bbsplit_fasta_list is empty: ${ch_bbsplit_fasta_list.getName()}!")
+        }
+    }
+}
+
+//
+// Exit pipeline if incorrect --genome key provided
+//
+def genomeExistsError() {
+    if (params.genomes && params.genome && !params.genomes.containsKey(params.genome)) {
+        def error_string = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
+            "  Genome '${params.genome}' not found in any config files provided to the pipeline.\n" +
+            "  Currently, the available genome keys are:\n" +
+            "  ${params.genomes.keySet().join(", ")}\n" +
+            "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        error(error_string)
+    }
+}
+//
+// Generate methods description for MultiQC
+//
+def toolCitationText() {
+    // TODO nf-core: Optionally add in-text citation tools to this list.
+    // Can use ternary operators to dynamically construct based conditions, e.g. params["run_xyz"] ? "Tool (Foo et al. 2023)" : "",
+    // Uncomment function in methodsDescriptionText to render in MultiQC report
+    def citation_text = [
+            "Tools used in the workflow included:",
+            "FastQC (Andrews 2010),",
+            "MultiQC (Ewels et al. 2016)",
+            "."
+        ].join(' ').trim()
+
+    return citation_text
+}
+
+def toolBibliographyText() {
+    // TODO nf-core: Optionally add bibliographic entries to this list.
+    // Can use ternary operators to dynamically construct based conditions, e.g. params["run_xyz"] ? "<li>Author (2023) Pub name, Journal, DOI</li>" : "",
+    // Uncomment function in methodsDescriptionText to render in MultiQC report
+    def reference_text = [
+            "<li>Andrews S, (2010) FastQC, URL: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/).</li>",
+            "<li>Ewels, P., Magnusson, M., Lundin, S., & Käller, M. (2016). MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics , 32(19), 3047–3048. doi: /10.1093/bioinformatics/btw354</li>"
+        ].join(' ').trim()
+
+    return reference_text
+}
+
+def methodsDescriptionText(mqc_methods_yaml) {
+    // Convert  to a named map so can be used as with familiar NXF ${workflow} variable syntax in the MultiQC YML file
+    def meta = [:]
+    meta.workflow = workflow.toMap()
+    meta["manifest_map"] = workflow.manifest.toMap()
+
+    // Pipeline DOI
+    if (meta.manifest_map.doi) {
+        // Using a loop to handle multiple DOIs
+        // Removing `https://doi.org/` to handle pipelines using DOIs vs DOI resolvers
+        // Removing ` ` since the manifest.doi is a string and not a proper list
+        def temp_doi_ref = ""
+        def manifest_doi = meta.manifest_map.doi.tokenize(",")
+        manifest_doi.each { doi_ref ->
+            temp_doi_ref += "(doi: <a href=\'https://doi.org/${doi_ref.replace("https://doi.org/", "").replace(" ", "")}\'>${doi_ref.replace("https://doi.org/", "").replace(" ", "")}</a>), "
+        }
+        meta["doi_text"] = temp_doi_ref.substring(0, temp_doi_ref.length() - 2)
+    } else meta["doi_text"] = ""
+    meta["nodoi_text"] = meta.manifest_map.doi ? "" : "<li>If available, make sure to update the text to include the Zenodo DOI of version of the pipeline used. </li>"
+
+    // Tool references
+    meta["tool_citations"] = ""
+    meta["tool_bibliography"] = ""
+
+    // TODO nf-core: Only uncomment below if logic in toolCitationText/toolBibliographyText has been filled!
+    // meta["tool_citations"] = toolCitationText().replaceAll(", \\.", ".").replaceAll("\\. \\.", ".").replaceAll(", \\.", ".")
+    // meta["tool_bibliography"] = toolBibliographyText()
+    def methods_text = mqc_methods_yaml.text
+
+    def engine =  new groovy.text.SimpleTemplateEngine()
+    def description_html = engine.createTemplate(methods_text).make(meta)
+
+    return description_html.toString()
+}
+
+//
+// Print a warning if both GTF and GFF have been provided
+//
+def gtfGffWarn() {
+    log.warn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
+        "  Both '--gtf' and '--gff' parameters have been provided.\n" +
+        "  Using GTF file as priority.\n" +
+        "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+}
+
+//
+// Print a warning if using GRCh38 assembly from igenomes.config
+//
+def ncbiGenomeWarn() {
+    log.warn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
+        "  When using '--genome GRCh38' the assembly is from the NCBI and NOT Ensembl.\n" +
+        "  Biotype QC will be skipped to circumvent the issue below:\n" +
+        "  https://github.com/nf-core/rnaseq/issues/460\n\n" +
+        "  If you would like to use the soft-masked Ensembl assembly instead please see:\n" +
+        "  https://github.com/nf-core/rnaseq/issues/159#issuecomment-501184312\n" +
+        "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+}
+
+//
+// Print a warning if using a UCSC assembly from igenomes.config
+//
+def ucscGenomeWarn() {
+    log.warn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
+        "  When using UCSC assemblies the 'gene_biotype' field is absent from the GTF file.\n" +
+        "  Biotype QC will be skipped to circumvent the issue below:\n" +
+        "  https://github.com/nf-core/rnaseq/issues/460\n\n" +
+        "  If you would like to use the soft-masked Ensembl assembly instead please see:\n" +
+        "  https://github.com/nf-core/rnaseq/issues/159#issuecomment-501184312\n" +
+        "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+}
+
+//
+// Print a warning if using '--transcript_fasta'
+//
+def transcriptsFastaWarn() {
+    log.warn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
+        "  '--transcript_fasta' parameter has been provided.\n" +
+        "  Make sure transcript names in this file match those in the GFF/GTF file.\n\n" +
+        "  Please see:\n" +
+        "  https://github.com/nf-core/rnaseq/issues/753\n" +
+        "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+}
+
+
+
+
+
+
+//
+// Print a warning if using '--aligner star_rsem' and providing both '--rsem_index' and '--star_index'
+//
+def rsemStarIndexWarn() {
+    log.warn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
+        "  When using '--aligner star_rsem', both the STAR and RSEM indices should\n" +
+        "  be present in the path specified by '--rsem_index'.\n\n" +
+        "  This warning has been generated because you have provided both\n" +
+        "  '--rsem_index' and '--star_index'. The pipeline will ignore the latter.\n\n" +
+        "  Please see:\n" +
+        "  https://github.com/nf-core/rnaseq/issues/568\n" +
+        "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+}
+
+
+
+//
+// Print a warning if using '--additional_fasta' and '--<ALIGNER>_index'
+//
+def additionaFastaIndexWarn(index) {
+    log.warn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
+        "  When using '--additional_fasta <FASTA_FILE>' the aligner index will not\n" +
+        "  be re-built with the transgenes incorporated by default since you have \n" +
+        "  already provided an index via '--${index}_index <INDEX>'.\n\n" +
+        "  Set '--additional_fasta <FASTA_FILE> --${index}_index false --gene_bed false --save_reference'\n" +
+        "  to re-build the index with transgenes included and the index and gene BED file will be saved in\n" +
+        "  'results/genome/index/${index}/' for re-use with '--${index}_index'.\n\n" +
+        "  Ignore this warning if you know that the index already contains transgenes.\n\n" +
+        "  Please see:\n" +
+        "  https://github.com/nf-core/rnaseq/issues/556\n" +
+        "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+}
+
+
+
+//
+// Function to generate an error if contigs in genome fasta file > 512 Mbp
+//
+def checkMaxContigSize(fai_file) {
+    def max_size = 512000000
+    fai_file.eachLine { line ->
+        def lspl  = line.split('\t')
+        def chrom = lspl[0]
+        def size  = lspl[1]
+        if (size.toInteger() > max_size) {
+            def error_string = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
+                "  Contig longer than ${max_size}bp found in reference genome!\n\n" +
+                "  ${chrom}: ${size}\n\n" +
+                "  Provide the '--bam_csi_index' parameter to use a CSI instead of BAI index.\n\n" +
+                "  Please see:\n" +
+                "  https://github.com/nf-core/rnaseq/issues/744\n" +
+                "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+            error(error_string)
+        }
+    }
+}
+
+//
+// Function that parses and returns the alignment rate from the STAR log output
+//
+def getStarPercentMapped(params, align_log) {
+    def percent_aligned = 0
+    def pattern = /Uniquely mapped reads %\s*\|\s*([\d\.]+)%/
+    align_log.eachLine { line ->
+        def matcher = line =~ pattern
+        if (matcher) {
+            percent_aligned = matcher[0][1].toFloat()
+        }
+    }
+
+    def pass = false
+    if (percent_aligned >= params.min_mapped_reads.toFloat()) {
+        pass = true
+    }
+    return [ percent_aligned, pass ]
+}
+
+//
+// Function to check whether biotype field exists in GTF file
+//
+def biotypeInGtf(gtf_file, biotype) {
+    def hits = 0
+    gtf_file.eachLine { line ->
+        def attributes = line.split('\t')[-1].split()
+        if (attributes.contains(biotype)) {
+            hits += 1
+        }
+    }
+    if (hits) {
+        return true
+    } else {
+        log.warn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
+            "  Biotype attribute '${biotype}' not found in the last column of the GTF file!\n\n" +
+            "  Biotype QC will be skipped to circumvent the issue below:\n" +
+            "  https://github.com/nf-core/rnaseq/issues/460\n\n" +
+            "  Amend '--featurecounts_group_type' to change this behaviour.\n" +
+            "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        return false
+    }
+}
+
+
+
+//
+// Print pipeline summary on completion
+//
+def rnaseqSummary(monochrome_logs=true, pass_mapped_reads=[:], pass_trimmed_reads=[:], pass_strand_check=[:]) {
+    def colors = logColours(monochrome_logs)
+
+    def fail_mapped_count  = pass_mapped_reads.count  { key, value -> value == false }
+    def fail_trimmed_count = pass_trimmed_reads.count { key, value -> value == false }
+    def fail_strand_count  = pass_strand_check.count  { key, value -> value == false }
+    if (workflow.success) {
+        def color = colors.green
+        def status = []
+        if (workflow.stats.ignoredCount != 0) {
+            color = colors.yellow
+            status += ['with errored process(es)']
+        }
+        if (fail_mapped_count > 0 || fail_trimmed_count > 0) {
+            color = colors.yellow
+            status += ['with skipped sampl(es)']
+        }
+        log.info "-${colors.purple}Pipeline completed successfully ${status.join(', ')}${colors.reset}-"
+        if (fail_trimmed_count > 0) {
+            log.info "-${colors.red} Please check MultiQC report: ${fail_trimmed_count}/${pass_trimmed_reads.size()} samples skipped since they failed ${params.min_trimmed_reads} trimmed read threshold.${colors.reset}-"
+        }
+        if (fail_mapped_count > 0) {
+            log.info "-${colors.red} Please check MultiQC report: ${fail_mapped_count}/${pass_mapped_reads.size()} samples skipped since they failed STAR ${params.min_mapped_reads}% mapped threshold.${colors.reset}-"
+        }
+        if (fail_strand_count > 0) {
+            log.info "-${colors.red} Please check MultiQC report: ${fail_strand_count}/${pass_strand_check.size()} samples failed strandedness check.${colors.reset}-"
+        }
+    } else {
+        log.info "-${colors.red} Pipeline completed with errors${colors.reset}-"
+    }
+}
+
+
+
+//
+// Create MultiQC tsv custom content from a list of values (moved from fastq_qc_trim_filter_setstrandedness)
+//
+def multiqcTsvFromList(tsv_data, header) {
+    def tsv_string = ""
+    if (tsv_data.size() > 0) {
+        tsv_string += "${header.join('\t')}\n"
+        tsv_string += tsv_data.join('\n')
+    }
+    return tsv_string
+}

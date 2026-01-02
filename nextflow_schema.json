@@ -1,0 +1,562 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/pdichiaro/LMD_rnaseq/master/nextflow_schema.json",
+    "title": "LMDseq pipeline parameters",
+    "description": "RNA sequencing analysis pipeline for low input samples from Laser Microdissection (LMD). Optimized pseudo-alignment workflow with flexible output formats.",
+    "type": "object",
+    "$defs": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
+            "required": [
+                "input",
+                "outdir"
+            ],
+            "properties": {
+                "input": {
+                    "type": "string",
+                    "description": "Path to the sample sheet (Sample.txt) containing metadata about the LMD samples.",
+                    "help_text": "Provide the full path to a tab-separated sample sheet with 6 columns and a header row. This file is required to run the pipeline. The file should contain: SID, SHORT_NAME, REPLICATE, RID, strandedness, FASTQ_FOLDER.",
+                    "format": "file-path",
+                    "exists": true,
+                    "schema": "assets/schema_input.json",
+                    "mimetype": "text/plain",
+                    "pattern": "^\\S+\\.(txt|tsv)$",
+                    "fa_icon": "fas fa-file-alt",
+                    "errorMessage": "The input must be a valid tab-separated file path with no spaces, ending in '.txt' or '.tsv', and must exist."
+                },
+                "outdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "minLength": 1,
+                    "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "email": {
+                    "type": "string",
+                    "description": "Email address for completion summary.",
+                    "fa_icon": "fas fa-envelope",
+                    "help_text": "Provide your email address to receive a summary report when the workflow completes. If set in your user config file (`~/.nextflow/config`), you don't need to specify this for each run.",
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
+                    "errorMessage": "The email must be a valid address in the format 'name@example.com' and must not contain spaces."
+                },
+                "multiqc_title": {
+                    "type": "string",
+                    "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
+                    "fa_icon": "fas fa-file-signature"
+                }
+            }
+        },
+        "reference_genome_options": {
+            "title": "Reference genome options",
+            "type": "object",
+            "fa_icon": "fas fa-dna",
+            "description": "Reference genome related files and options required for the workflow.",
+            "properties": {
+                "genome": {
+                    "type": "string",
+                    "description": "Name of iGenomes reference.",
+                    "fa_icon": "fas fa-book",
+                    "minLength": 1,
+                    "pattern": "^[a-zA-Z0-9_\\-\\.]+$",
+                    "errorMessage": "The genome name must not contain spaces and must be a valid identifier.",
+                    "help_text": "If using a reference genome configured with iGenomes, provide the ID for the reference (e.g., `--genome GRCh38`). This builds paths for all required reference files."
+                },
+                "fasta": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/plain",
+                    "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
+                    "description": "Path to FASTA genome file.",
+                    "help_text": "This parameter is mandatory if `--genome` is not specified. If you don't have the appropriate Kallisto index, it will be generated automatically. Use with `--save_reference` to store the index for future runs.",
+                    "fa_icon": "far fa-file-code",
+                    "errorMessage": "The FASTA file path must end with .fa, .fna, .fasta optionally with .gz, must not contain spaces, and must exist."
+                },
+                "gtf": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/plain",
+                    "pattern": "^\\S+\\.gtf(\\.gz)?$",
+                    "description": "Path to GTF annotation file.",
+                    "fa_icon": "fas fa-code-branch",
+                    "help_text": "This parameter is mandatory if `--genome` is not specified.",
+                    "errorMessage": "The GTF file must have a .gtf or .gtf.gz extension, must not contain spaces, and must exist."
+                },
+                "gff": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/plain",
+                    "pattern": "^\\S+\\.gff(\\.gz)?$",
+                    "fa_icon": "fas fa-code-branch",
+                    "description": "Path to GFF3 annotation file.",
+                    "help_text": "This parameter must be specified if neither `--genome` nor `--gtf` is provided.",
+                    "errorMessage": "The GFF file must have a .gff or .gff.gz extension, must not contain spaces, and must exist."
+                },
+                "transcript_fasta": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/plain",
+                    "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
+                    "fa_icon": "far fa-file-code",
+                    "description": "Path to FASTA transcriptome file."
+                },
+                "index": {
+                    "type": "string",
+                    "format": "path",
+                    "exists": true,
+                    "fa_icon": "fas fa-bezier-curve",
+                    "description": "Path to directory or tar.gz archive for pre-built Kallisto index."
+                },
+                "kallisto_index": {
+                    "type": "string",
+                    "format": "path",
+                    "exists": true,
+                    "fa_icon": "fas fa-bezier-curve",
+                    "description": "Path to directory or tar.gz archive for pre-built Kallisto index."
+                },
+                "reference": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/plain",
+                    "fa_icon": "fas fa-database",
+                    "description": "Optional path to gene annotation reference file for enriched matrix output.",
+                    "help_text": "OPTIONAL: Provides gene symbols, names, coordinates, and database cross-references. Without this file, a clean minimal matrix (gene_id + counts) is generated. With this file, a comprehensive annotated matrix is produced. Choose based on your analysis needs."
+                },
+
+                "gencode": {
+                    "type": "boolean",
+                    "fa_icon": "fas fa-code-branch",
+                    "description": "Specify if your GTF annotation is in GENCODE format.",
+                    "help_text": "If your GTF file is in GENCODE format, enable this parameter to handle the annotation correctly."
+                },
+                "skip_gtf_filter": {
+                    "type": "boolean",
+                    "default": true,
+                    "fa_icon": "fas fa-forward",
+                    "description": "Skip filtering of GTF for valid scaffolds and/or transcript IDs.",
+                    "help_text": "If you're confident in your GTF file's compatibility with the genome FASTA file, or want to ignore filtering errors, enable this option."
+                },
+                "save_reference": {
+                    "type": "boolean",
+                    "description": "If generated by the pipeline save the Kallisto index in the results directory.",
+                    "help_text": "If the pipeline generates a Kallisto index, use this parameter to save it to your results folder for future pipeline runs, reducing processing time.",
+                    "fa_icon": "fas fa-save"
+                },
+                "igenomes_ignore": {
+                    "type": "boolean",
+                    "description": "Do not load the iGenomes reference config.",
+                    "fa_icon": "fas fa-ban",
+                    "hidden": true,
+                    "help_text": "Prevent loading of `igenomes.config` when running the pipeline. Use this option if you encounter conflicts between custom parameters and those in the iGenomes configuration."
+                },
+                "igenomes_base": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "The base path to the igenomes reference files",
+                    "fa_icon": "fas fa-ban",
+                    "hidden": true,
+                    "default": "s3://ngi-igenomes/igenomes/"
+                }
+            }
+        },
+        "read_trimming_options": {
+            "title": "Read trimming options",
+            "type": "object",
+            "fa_icon": "fas fa-cut",
+            "description": "Options to adjust read trimming criteria.",
+            "properties": {
+                "trimmer": {
+                    "type": "string",
+                    "default": "trimgalore",
+                    "description": "Specifies the trimming tool to use.",
+                    "fa_icon": "fas fa-cut",
+                    "enum": [
+                        "trimgalore"
+                    ]
+                },
+                "extra_trimgalore_args": {
+                    "type": "string",
+                    "minLength": 1,
+                    "default": "--clip_R2 3 --quality 20 --stringency 3 --length 20",
+                    "description": "Extra arguments to pass to Trim Galore! command in addition to defaults defined by the pipeline.",
+                    "fa_icon": "fas fa-plus"
+                },
+                "skip_trimming": {
+                    "type": "boolean",
+                    "description": "Skip the adapter trimming step.",
+                    "help_text": "Use this option if your FastQ files have already been trimmed or if you're certain they contain no adapter contamination.",
+                    "fa_icon": "fas fa-fast-forward"
+                }
+            }
+        },
+        "read_filtering_options": {
+            "title": "Read filtering options",
+            "type": "object",
+            "description": "Options for filtering reads prior to alignment",
+            "default": "",
+            "properties": {
+                "bbsplit_fasta_list": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/plain",
+                    "fa_icon": "fas fa-list-alt",
+                    "description": "Path to comma-separated file containing a list of reference genomes to filter reads against with BBSplit.",
+                    "help_text": "The file should contain 2 columns: short name and full path to reference genome(s)."
+                },
+                "skip_bbsplit": {
+                    "type": "boolean",
+                    "default": true,
+                    "fa_icon": "fas fa-fast-forward",
+                    "description": "Skip BBSplit for removal of non-reference genome reads."
+                }
+            },
+            "fa_icon": "fas fa-trash-alt"
+        },
+        "alignment_options": {
+            "title": "Pseudo-alignment options",
+            "type": "object",
+            "fa_icon": "fas fa-map-signs",
+            "description": "Options to adjust parameters for Kallisto pseudo-alignment. Traditional alignment is disabled for LMD samples.",
+            "properties": {
+                "pseudo_aligner": {
+                    "type": "string",
+                    "default": "kallisto",
+                    "description": "Pseudo-alignment algorithm optimized for LMD samples.",
+                    "fa_icon": "fas fa-map-signs",
+                    "enum": [
+                        "kallisto"
+                    ]
+                },
+                "skip_pseudo_alignment": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip pseudo-alignment step.",
+                    "fa_icon": "fas fa-forward"
+                },
+                "extra_kallisto_quant_args": {
+                    "type": "string",
+                    "minLength": 1,
+                    "default": "-b 50 --single-overhang --genomebam",
+                    "description": "Extra arguments to pass to Kallisto quant command optimized for LMD samples.",
+                    "fa_icon": "fas fa-plus"
+                },
+                "extra_kallisto_index_args": {
+                    "type": "string",
+                    "description": "Extra arguments to pass to Kallisto index command in addition to defaults defined by the pipeline.",
+                    "fa_icon": "fas fa-plus"
+                },
+                "kallisto_quant_fraglen": {
+                    "type": "integer",
+                    "description": "In single-end mode Kallisto requires an estimated fragment length. Specify a default value for that here.",
+                    "default": 200,
+                    "fa_icon": "fas fa-ruler-horizontal"
+                },
+                "kallisto_quant_fraglen_sd": {
+                    "type": "integer",
+                    "description": "In single-end mode, Kallisto requires an estimated standard error for fragment length. Specify a default value for that here.",
+                    "default": 200,
+                    "fa_icon": "fas fa-sort-amount-up-alt"
+                },
+                "kallisto_kmer_size": {
+                    "type": "integer",
+                    "default": 31,
+                    "description": "Kmer length passed to Kallisto indexing step",
+                    "help_text": "Setting an appropriate kmer size is crucial for quantification with Kallisto. This is particularly important for short reads (<50bp), where the default size of 31 can cause problems.",
+                    "fa_icon": "fas fa-ruler-horizontal"
+                },
+                "bin_size": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "Bin size for BigWig file creation.",
+                    "fa_icon": "fas fa-chart-bar"
+                },
+
+                "seq_mode": {
+                    "type": "string",
+                    "default": "SE",
+                    "description": "Sequencing mode for LMD samples.",
+                    "fa_icon": "fas fa-dna",
+                    "enum": [
+                        "SE",
+                        "PE"
+                    ]
+                }
+            }
+        },
+        "deseq2_options": {
+            "title": "DESeq2 normalization options",
+            "type": "object",
+            "fa_icon": "fas fa-chart-line",
+            "description": "Options for DESeq2 normalization and quality control analysis.",
+            "properties": {
+                "min_reads": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Minimum read count threshold for gene filtering.",
+                    "help_text": "Genes with fewer than this number of reads across samples will be filtered out before DESeq2 analysis.",
+                    "fa_icon": "fas fa-filter"
+                }
+            }
+        },
+        "quality_control": {
+            "title": "Quality Control",
+            "type": "object",
+            "description": "Quality control options for LMD samples.",
+            "default": "",
+            "properties": {
+                "skip_fastqc": {
+                    "type": "boolean",
+                    "description": "Skip FastQC quality control analysis.",
+                    "fa_icon": "fas fa-fast-forward"
+                },
+                "skip_multiqc": {
+                    "type": "boolean",
+                    "description": "Skip MultiQC integrated reporting.",
+                    "fa_icon": "fas fa-fast-forward"
+                },
+                "multiqc_config": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/plain",
+                    "description": "Custom config file to supply to MultiQC.",
+                    "fa_icon": "fas fa-cog",
+                    "hidden": true
+                },
+                "multiqc_logo": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/plain",
+                    "description": "Custom logo file to supply to MultiQC. File name must also be set in the MultiQC config file",
+                    "fa_icon": "fas fa-image",
+                    "hidden": true
+                },
+                "multiqc_methods_description": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/plain",
+                    "description": "Custom MultiQC yaml file containing HTML including a methods description.",
+                    "fa_icon": "fas fa-cog"
+                },
+                "max_multiqc_email_size": {
+                    "type": "string",
+                    "description": "File size limit when attaching MultiQC reports to summary emails.",
+                    "default": "25.MB",
+                    "fa_icon": "fas fa-file-upload",
+                    "hidden": true
+                }
+            }
+        },
+        "disabled_features": {
+            "title": "Disabled features (not used for LMD samples)",
+            "type": "object",
+            "fa_icon": "fas fa-ban",
+            "description": "Features disabled for LMD samples (UMI processing and rRNA removal not needed).",
+            "properties": {}
+        },
+        "institutional_config_options": {
+            "title": "Institutional config options",
+            "type": "object",
+            "fa_icon": "fas fa-university",
+            "description": "Parameters used to describe centralised config profiles. These should not be edited.",
+            "help_text": "These parameters define centralized configuration profiles that appear in the Nextflow log when you run a pipeline. You typically don't need to modify these values.",
+            "properties": {
+                "custom_config_version": {
+                    "type": "string",
+                    "description": "Git commit id for Institutional configs.",
+                    "default": "master",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "custom_config_base": {
+                    "type": "string",
+                    "description": "Base directory for Institutional configs.",
+                    "default": "https://raw.githubusercontent.com/nf-core/configs/master",
+                    "hidden": true,
+                    "help_text": "When running offline, Nextflow cannot retrieve institutional configuration files from the internet. If needed, download these files from the repository and specify their location with this parameter.",
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_name": {
+                    "type": "string",
+                    "description": "Institutional config name.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_description": {
+                    "type": "string",
+                    "description": "Institutional config description.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_contact": {
+                    "type": "string",
+                    "description": "Institutional config contact information.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                },
+                "config_profile_url": {
+                    "type": "string",
+                    "description": "Institutional config URL link.",
+                    "hidden": true,
+                    "fa_icon": "fas fa-users-cog"
+                }
+            }
+        },
+        "generic_options": {
+            "title": "Generic options",
+            "type": "object",
+            "fa_icon": "fas fa-file-import",
+            "description": "Less common options for the pipeline, typically set in a config file.",
+            "help_text": "These options are common across all nf-core pipelines and control core pipeline behavior. Typically set in a Nextflow config file (e.g., `~/.nextflow/config`) for all pipeline runs.",
+            "properties": {
+                "version": {
+                    "type": "boolean",
+                    "description": "Display version and exit.",
+                    "fa_icon": "fas fa-question-circle",
+                    "hidden": true
+                },
+                "publish_dir_mode": {
+                    "type": "string",
+                    "default": "copy",
+                    "description": "Method used to save pipeline results to output directory.",
+                    "help_text": "Controls how files are saved to the output directory through Nextflow's `publishDir` directive. See the [Nextflow documentation](https://www.nextflow.io/docs/latest/process.html#publishdir) for available options.",
+                    "fa_icon": "fas fa-copy",
+                    "enum": [
+                        "symlink",
+                        "rellink",
+                        "link",
+                        "copy",
+                        "copyNoFollow",
+                        "move"
+                    ],
+                    "hidden": true
+                },
+                "publish_dir_overwrite": {
+                    "type": "boolean",
+                    "description": "Overwrite existing files in the output directory.",
+                    "fa_icon": "fas fa-copy",
+                    "hidden": true
+                },
+                "email_on_fail": {
+                    "type": "string",
+                    "description": "Email address for completion summary, only when pipeline fails.",
+                    "fa_icon": "fas fa-exclamation-triangle",
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
+                    "help_text": "Specify an email address to receive a summary report only when the pipeline fails to complete successfully.",
+                    "hidden": true
+                },
+                "plaintext_email": {
+                    "type": "boolean",
+                    "description": "Send plain-text email instead of HTML.",
+                    "fa_icon": "fas fa-remove-format",
+                    "hidden": true
+                },
+                "monochrome_logs": {
+                    "type": "boolean",
+                    "description": "Do not use coloured log outputs.",
+                    "fa_icon": "fas fa-palette",
+                    "hidden": true
+                },
+                "hook_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "minLength": 1,
+                    "description": "Incoming Webhook URL for messaging service",
+                    "fa_icon": "fas fa-people-group",
+                    "help_text": "URL for messaging service integration. Currently supports Microsoft Teams and Slack.",
+                    "hidden": true
+                },
+                "validate_params": {
+                    "type": "boolean",
+                    "description": "Boolean whether to validate parameters against the schema at runtime",
+                    "default": false,
+                    "fa_icon": "fas fa-check-square",
+                    "hidden": true
+                },
+                "pipelines_testdata_base_path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "fa_icon": "far fa-check-circle",
+                    "format": "directory-path",
+                    "description": "Base URL or local path to location of pipeline test dataset files",
+                    "default": "https://raw.githubusercontent.com/nf-core/test-datasets/7f1614baeb0ddf66e60be78c3d9fa55440465ac8/",
+                    "hidden": true
+                },
+                "trace_report_suffix": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9_\\-\\.{}]+$",
+                    "fa_icon": "far fa-calendar-alt",
+                    "description": "Suffix to add to the trace report filename.",
+                    "help_text": "You can use '{date}' as a placeholder which will be replaced with the current date and time in the format 'yyyy-MM-dd_HH-mm-ss'. For example, 'run_{date}' will become 'run_2023-05-15_14-30-45'.",
+                    "errorMessage": "The trace report suffix must only contain alphanumeric characters, underscores, hyphens, dots, and curly braces for date placeholders.",
+                    "hidden": true
+                },
+                "max_memory": {
+                    "type": "string",
+                    "description": "Maximum amount of memory that can be requested for any single job.",
+                    "default": "16.GB",
+                    "fa_icon": "fas fa-memory",
+                    "pattern": "^\\d+(\\.\\d+)?\\.?\\s*(K|M|G|T)?B$",
+                    "hidden": true
+                },
+                "max_cpus": {
+                    "type": "integer",
+                    "description": "Maximum number of CPUs that can be requested for any single job.",
+                    "default": 10,
+                    "fa_icon": "fas fa-microchip",
+                    "hidden": true
+                },
+                "max_time": {
+                    "type": "string",
+                    "description": "Maximum amount of time that can be requested for any single job.",
+                    "default": "240.h",
+                    "fa_icon": "far fa-clock",
+                    "pattern": "^(\\d+\\.?\\s*(s|m|h|d|day)\\s*)+$",
+                    "hidden": true
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/$defs/input_output_options"
+        },
+        {
+            "$ref": "#/$defs/reference_genome_options"
+        },
+        {
+            "$ref": "#/$defs/read_trimming_options"
+        },
+        {
+            "$ref": "#/$defs/read_filtering_options"
+        },
+        {
+            "$ref": "#/$defs/alignment_options"
+        },
+        {
+            "$ref": "#/$defs/deseq2_options"
+        },
+        {
+            "$ref": "#/$defs/quality_control"
+        },
+        {
+            "$ref": "#/$defs/disabled_features"
+        },
+        {
+            "$ref": "#/$defs/institutional_config_options"
+        },
+        {
+            "$ref": "#/$defs/generic_options"
+        }
+    ]
+}

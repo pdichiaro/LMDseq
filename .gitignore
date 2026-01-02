@@ -1,0 +1,33 @@
+# Nextflow execution files
+.nextflow*
+work/
+timeline.html
+trace.txt
+report.html
+dag.html
+.nextflow.log*
+
+# Test output directories
+results/
+results_test/
+test_output/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Log files  
+*.log
+
+# Mac files
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# R files
+.Rhistory
+.RData
+.Ruserdata

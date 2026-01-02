@@ -1,0 +1,6 @@
+# plot_type: 'table'
+# section_name: 'Sample Status'
+# description: 'Sample processing status and statistics'
+# pconfig:
+#     id: 'sample_status_table'
+#     title: 'Sample Status Summary'

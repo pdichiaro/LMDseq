@@ -1,0 +1,54 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/pdichiaro/LMD_rnaseq/master/assets/schema_input.json",
+    "title": "LMD_RNAseq pipeline - Sample.txt schema",
+    "description": "Schema for the sample metadata file used by the LMD_RNAseq pipeline",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "SID": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Sample ID must be provided and cannot contain spaces",
+                "meta": ["id"],
+                "description": "Sample ID (unique identifier for each LMD sample)"
+            },
+            "SHORT_NAME": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Short name must be provided and cannot contain spaces",
+                "meta": ["sample_name"],
+                "description": "Short sample name used for output file naming"
+            },
+            "REPLICATE": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Replicate identifier must be provided and cannot contain spaces",
+                "meta": ["replicate"],
+                "description": "Replicate identifier (e.g., R1, R2, R3)"
+            },
+            "RID": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Run ID must be provided and cannot contain spaces",
+                "description": "Sequencing run identifier"
+            },
+            "strandedness": {
+                "type": "string",
+                "enum": ["forward", "reverse", "unstranded"],
+                "errorMessage": "Strandedness must be one of: forward, reverse, unstranded",
+                "meta": ["strandedness"],
+                "description": "Library strandedness information"
+            },
+            "FASTQ_FOLDER": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "format": "directory-path",
+                "errorMessage": "FASTQ folder path must be provided, cannot contain spaces, and must be a valid directory path",
+                "description": "Full path to directory containing FASTQ files for this sample"
+            }
+        },
+        "required": ["SID", "SHORT_NAME", "REPLICATE", "RID", "strandedness", "FASTQ_FOLDER"]
+    }
+}
