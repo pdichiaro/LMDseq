@@ -6,16 +6,15 @@ The **LMDseq** pipeline is a specialized bioinformatics workflow designed for RN
 
 ## Pipeline Features
 
-- **🎯 LMD-Optimized**: Specifically designed for low input RNA samples from laser microdissection
-- **⚡ Kallisto Pseudo-alignment**: Fast and accurate quantification optimized for LMD samples  
-- **🔍 Quality Control**: Comprehensive FastQC analysis of raw and trimmed reads
-- **✂️ Adapter Trimming**: TrimGalore with LMD-specific quality parameters
-- **📊 Flexible Output**: Minimal (gene_id + counts) or enriched (full annotations) matrices
-- **🧬 Custom References**: Support for custom genome, transcript, and annotation files
-- **📈 DESeq2 QC**: Size factor normalization, VST, PCA, and correlation analysis
-- **📋 Comprehensive Reporting**: MultiQC integration for unified quality control reports
-- **🐳 Reproducible**: Containerized environment ensuring consistent results
-- **🚫 Streamlined**: No UMI processing or rRNA depletion (not needed for LMD samples)
+- **LMD-Optimized**: Specifically designed for low input RNA samples from laser microdissection
+- **Kallisto Pseudo-alignment**: Fast and accurate quantification optimized for LMD samples  
+- **Quality Control**: Comprehensive FastQC analysis of raw and trimmed reads
+- **Adapter Trimming**: TrimGalore with LMD-specific quality parameters
+- **Flexible Output**: Minimal (gene_id + counts) or enriched (full annotations) matrices
+- **Custom References**: Support for custom genome, transcript, and annotation files
+- **DESeq2 QC**: Size factor normalization, VST, PCA, and correlation analysis
+- **Reproducible**: Containerized environment ensuring consistent results
+- **Streamlined**: No UMI processing or rRNA depletion (not needed for LMD samples)
 
 
 ## Input Preparation
@@ -95,8 +94,8 @@ nextflow run pdichiaro/LMDseq \
   --outdir results \
   -profile docker
 ```
-- ✅ **Output**: Clean gene expression matrix (gene_id + counts)
-- ✅ **Use case**: Quick quantification and exploratory analysis
+- **Output**: Clean gene expression matrix (gene_id + counts)
+- **Use case**: Quick quantification and exploratory analysis
 
 #### **2. Custom Genome Files (Minimal Output)**
 ```bash
@@ -107,8 +106,8 @@ nextflow run pdichiaro/LMDseq \
   --outdir results \
   -profile docker
 ```
-- ✅ **Output**: Minimal matrix with custom genome
-- ✅ **Use case**: Non-standard organisms or custom assemblies
+- **Output**: Minimal matrix with custom genome
+- **Use case**: Non-standard organisms or custom assemblies
 
 #### **3. Enriched Analysis (Full Annotations)**
 ```bash
@@ -120,8 +119,8 @@ nextflow run pdichiaro/LMDseq \
   --outdir results \
   -profile docker
 ```
-- ✅ **Output**: Full gene matrix with symbols, names, coordinates
-- ✅ **Use case**: Publication-ready analysis with detailed annotations
+- **Output**: Full gene matrix with symbols, names, coordinates
+- **Use case**: Publication-ready analysis with detailed annotations
 
 #### **4. Transcript-Only Mode**
 ```bash
@@ -131,10 +130,10 @@ nextflow run pdichiaro/LMDseq \
   --outdir results \
   -profile docker
 ```
-- ✅ **Output**: Direct transcript quantification
-- ✅ **Use case**: Custom transcriptomes or pre-built indices
+- **Output**: Direct transcript quantification
+- **Use case**: Custom transcriptomes or pre-built indices
 
-### 📊 Reference Genome Options
+### Reference Genome Options
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
@@ -145,7 +144,7 @@ nextflow run pdichiaro/LMDseq \
 | `--reference` | Path | Gene annotation reference file **(recommended)** | `/path/to/annotations.txt` |
 | `--index` | Path | Pre-built Kallisto index | `/path/to/kallisto.idx` |
 
-### 🔧 Core Pipeline Parameters
+### Core Pipeline Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -154,7 +153,7 @@ nextflow run pdichiaro/LMDseq \
 | `--pseudo_aligner` | String | `kallisto` | Pseudo-alignment tool (only kallisto supported) |
 | `--skip_pseudo_alignment` | Boolean | `false` | Skip pseudo-alignment step |
 
-### ⚙️ Kallisto-Specific Parameters
+###  Kallisto-Specific Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -164,7 +163,7 @@ nextflow run pdichiaro/LMDseq \
 | `--kallisto_quant_fraglen_sd` | Integer | `200` | Standard deviation for fragment length |
 | `--kallisto_kmer_size` | Integer | `31` | K-mer size for Kallisto index |
 
-### ✂️ Quality Control & Trimming Parameters
+###  Quality Control & Trimming Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -174,13 +173,13 @@ nextflow run pdichiaro/LMDseq \
 | `--skip_trimming` | Boolean | `false` | Skip adapter trimming |
 | `--skip_multiqc` | Boolean | `false` | Skip MultiQC report generation |
 
-### 📈 DESeq2 QC Parameters
+###  DESeq2 QC Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `--min_reads` | Integer | `10` | Minimum read count threshold for gene filtering |
 
-### 🧬 Reference Genome Processing
+###  Reference Genome Processing
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -189,7 +188,7 @@ nextflow run pdichiaro/LMDseq \
 | `--save_reference` | Boolean | `false` | Save reference files to output directory |
 | `--igenomes_ignore` | Boolean | `false` | Ignore iGenomes reference configuration |
 
-### 🔧 Advanced Parameters
+###  Advanced Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -198,40 +197,24 @@ nextflow run pdichiaro/LMDseq \
 | `--chromosomes` | Path | `null` | Chromosome list file |
 
 
-
-### 📋 MultiQC Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--multiqc_config` | Path | `null` | Custom MultiQC configuration file |
-| `--multiqc_title` | String | `null` | Custom title for MultiQC report |
-| `--multiqc_logo` | Path | `null` | Custom logo for MultiQC report |
-
-## 🎯 Output Formats
+### Output Formats
 
 The pipeline generates different output formats depending on whether a reference annotation file is provided:
 
 ### **Minimal Output (No --reference)**
-```tsv
+```
 gene_id        SAMPLE1  SAMPLE2  SAMPLE3
 ENSG00000001   245      189      312
 ENSG00000002   156      203      89
 ENSG00000003   89       134      201
 ```
-- ✅ **Clean and simple** - gene IDs + counts only
-- ✅ **Smaller file size** - optimal for large datasets  
-- ✅ **Analysis-ready** - direct input for DESeq2/edgeR
-
 ### **Enriched Output (With --reference)**
-```tsv
+```
 gene_id        Symbol  Name                  type_of_gene    seqnames  start     SAMPLE1  SAMPLE2  SAMPLE3
 ENSG00000001   TP53    tumor protein p53     protein_coding  chr17     7565097   245      189      312  
 ENSG00000002   BRCA1   breast cancer gene 1  protein_coding  chr17     43044295  156      203      89
 ENSG00000003   TERT    telomerase reverse    protein_coding  chr5      1253147   89       134      201
 ```
-- ✅ **Rich annotations** - gene symbols, names, coordinates
-- ✅ **Publication-ready** - detailed gene information
-- ✅ **Database cross-references** - HGNC, Entrez Gene IDs
 
 | Parameter | Description | Required | Default |
 |-----------|-------------|----------|---------|
@@ -242,7 +225,7 @@ ENSG00000003   TERT    telomerase reverse    protein_coding  chr5      1253147  
 | `--reference` | Gene annotation reference file (optional) | ❌ | `null` |
 | `--index` | Pre-built Kallisto index | ❌ | `null` |
 
-### 🔧 Core Parameters
+### Core Parameters
 
 | Parameter | Description | Required | Default |
 |-----------|-------------|----------|---------|
@@ -252,7 +235,7 @@ ENSG00000003   TERT    telomerase reverse    protein_coding  chr5      1253147  
 | `--seq_mode` | Sequencing mode (SE/PE) | ❌ | `SE` |
 | `--min_reads` | Minimum read threshold for gene filtering | ❌ | `10` |
 
-### ⚙️ Kallisto-Specific Parameters
+### Kallisto-Specific Parameters
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
@@ -325,42 +308,16 @@ results/
 ├── 4_BAM/                      # Kallisto quantification results and pseudo-BAM files
 ├── 5_Bw/                       # BigWig coverage files for genome browser visualization
 ├── 6_Norm_folder/              # Normalization plots and read distribution analysis
-│   └── Read_Distribution/      # Before/after normalization distribution plots
 ├── 7_Counts_folder/            # Gene expression matrices (raw and normalized)
 ├── 8_Quality_folder/           # Advanced QC analysis (PCA, correlations, distances)
-├── multiqc/                    # Integrated quality control reports
 └── pipeline_info/              # Pipeline execution information and resource usage
 ```
 
-### 📊 Output Matrix Formats
+### Output Matrix Formats
 
 The pipeline generates different matrix formats depending on whether a reference annotation file is provided:
 
-#### **🎯 Minimal Format (No Reference)**
-**File**: `7_Counts_folder/EX_reads_RAW.txt`
-```tsv
-gene_id        LCM_1_R1  LCM_2_R2  LCM_3_R3
-ENSG00000001   245       189       312
-ENSG00000002   156       203       89
-ENSG00000003   89        134       201
-```
-- ✅ **Clean and minimal** - only gene_id + sample counts
-- ✅ **Ready for analysis** - direct input for DESeq2/edgeR
-- ✅ **Small file size** - efficient storage and processing
-
-#### **🔍 Enriched Format (With Reference)**
-**File**: `7_Counts_folder/EX_reads_RAW.txt`
-```tsv
-gene_id        Symbol  Name                  type_of_gene    seqnames  start     end       LCM_1_R1  LCM_2_R2  LCM_3_R3
-ENSG00000001   TP53    tumor protein p53     protein_coding  chr17     7565097   7590856   245       189       312
-ENSG00000002   BRCA1   breast cancer gene 1  protein_coding  chr17     43044295  43125483  156       203       89
-ENSG00000003   TERT    telomerase reverse    protein_coding  chr5      1253147   1295162   89        134       201
-```
-- ✅ **Publication-ready** - includes gene symbols and descriptions
-- ✅ **Comprehensive annotations** - genomic coordinates and gene types
-- ✅ **Database cross-references** - HGNC, Entrez Gene IDs
-
-### 🔬 Key Output Files
+### Key Output Files
 
 #### **Gene Expression Matrices**
 | File | Description | Format |
@@ -373,10 +330,9 @@ ENSG00000003   TERT    telomerase reverse    protein_coding  chr5      1253147  
 #### **Quality Control Reports**
 | File | Description |
 |------|-------------|
-| `multiqc_report.html` | Comprehensive pipeline QC report |
-| `PCA_rlogTransformedID.pdf` | Principal component analysis plots |
+| `PCA_rlogTransformed.pdf` | Principal component analysis plots |
 | `Heatmap_sampleTosample_correlation.pdf` | Sample correlation matrix |
-| `Heatmap_sampleTosample_distances_vstTransformed.pdf` | Sample distance clustering |
+| `Heatmap_sampleTosample_distances.pdf` | Sample distance clustering |
 | `3D_PCA_Bio_replicates.html` | Interactive 3D PCA visualization |
 
 #### **Coverage and Visualization**
@@ -385,7 +341,7 @@ ENSG00000003   TERT    telomerase reverse    protein_coding  chr5      1253147  
 | `*.bw` | BigWig coverage files for genome browsers |
 | `*.bam` | Kallisto pseudo-alignments (genomic coordinates) |
 
-## 🚀 Advanced Usage
+## Advanced Usage
 
 ### **Profile Options**
 ```bash
@@ -434,26 +390,6 @@ nextflow run pdichiaro/LMDseq --version
 ```
 
 ---
-
-## 📚 **Summary**
-
-The **LMDseq pipeline** provides a comprehensive solution for laser microdissection RNA-seq analysis with:
-
-- ✅ **Flexible reference options** - iGenomes, custom FASTA, or transcript-only
-- ✅ **Two output modes** - minimal (gene_id + counts) or enriched (full annotations)  
-- ✅ **LMD-optimized processing** - no UMI or rRNA steps, Kallisto pseudo-alignment
-- ✅ **Complete quality control** - DESeq2 normalization, PCA, sample correlations
-- ✅ **Production ready** - containerized, reproducible, comprehensive reporting
-
-**Perfect for both exploratory and publication-ready LMD RNA-seq analysis!** 🎉
-- **Distance Analysis**: `8_Quality_folder/Heatmap_sampleTosample_distances_vstTransformed.pdf`
-- **Read Distribution**: `6_Norm_folder/Read_Distribution/`
-
-#### Individual Sample Results
-- **Kallisto Quantification**: `4_BAM/*/abundance.tsv`
-- **Quality Control**: `2_QC/*_fastqc.html`
-- **Trimming Reports**: `3_TRIM/*_trimming_report.txt`
-- **Coverage Files**: `5_Bw/*.bigwig`
 
 
 ## Support and Citation
